@@ -3,6 +3,7 @@
 #include <unistd.h>
 #include <limits.h>
 #include <string.h>
+#include "allowprocess.h"
 size_t get_executable_path( char* processdir,char* processname, size_t len){
         char* path_end;
         if(readlink("/proc/self/exe", processdir,len) <=0)
@@ -15,13 +16,22 @@ size_t get_executable_path( char* processdir,char* processname, size_t len){
         *path_end = '\0';
         return (size_t)(path_end - processdir);
 }
+void allowed(){}
 class Init{
   public:
   Init(){
     char path[PATH_MAX];
     char processname[1024];
+    const char ** ac;
     get_executable_path(path, processname, sizeof(path));
-    printf("directory:%s\nprocessname:%s\n",path,processname);
+    ac=allowprocess;
+    while(*ac){
+      if(strcmp(*ac,processname)==0)goto allowed;
+      ac++;
+    }
+    exit(1);
+    allowed:
+    allowed();
   }
 }init;
 //extern "C"{}
