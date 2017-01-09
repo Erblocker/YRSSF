@@ -14,6 +14,7 @@ static const char * allowprocess[]={
   "android.process.acore",
   "setting.sh",
   "com.android.systemui",
+  "org.yrssf.netspace",
   NULL
 };
 static const char * allowpath[]={

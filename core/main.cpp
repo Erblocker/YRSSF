@@ -63,11 +63,11 @@ extern "C" {
 #include <sqlite3.h>
 namespace yrssf{
 //////////////////////////////////
-void   int2str(int  * i,char * c){
+void   int2str(int32_t  * i,char * c){
   sprintf(c, "%8x ", *i);
   c[8]='\0';
 }
-void   str2int(char * c,int  * i){
+void   str2int(char * c,int32_t  * i){
   sscanf(c,  "%8x",  i); 
 }
 int randnum(){
@@ -134,6 +134,7 @@ class location{
   }
 };
 struct netHeader{
+  char     crypto;
   int32_t  userid;
   char     password[16];
   char     mode;
