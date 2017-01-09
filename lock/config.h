@@ -1,7 +1,8 @@
 static const char * allowprocess[]={
   "ls",
   "su",
-  "lua",
+  "YRSSF",
+  "yrssf",
   NULL
 };
 static const char * allowpath[]={
