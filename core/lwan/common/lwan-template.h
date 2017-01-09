@@ -22,21 +22,24 @@
 #include "strbuf.h"
 #include "lwan-coro.h"
 
-typedef int (*lwan_tpl_list_generator)(struct coro *coro);
+typedef struct lwan_tpl_t_ lwan_tpl_t;
+typedef struct lwan_var_descriptor_t_ lwan_var_descriptor_t;
 
-enum lwan_tpl_flag {
+typedef int (*lwan_tpl_list_generator_t)(coro_t *coro);
+
+typedef enum {
     LWAN_TPL_FLAG_CONST_TEMPLATE = 1<<0
-};
+} lwan_tpl_flag_t;
 
-struct lwan_var_descriptor {
+struct lwan_var_descriptor_t_ {
     const char *name;
     const off_t offset;
 
-    void (*append_to_strbuf)(struct strbuf *buf, void *ptr);
+    void (*append_to_strbuf)(strbuf_t *buf, void *ptr);
     bool (*get_is_empty)(void *ptr);
 
-    lwan_tpl_list_generator generator;
-    const struct lwan_var_descriptor *list_desc;
+    lwan_tpl_list_generator_t generator;
+    const lwan_var_descriptor_t *list_desc;
 };
 
 #define TPL_VAR_SIMPLE(struct_, var_, append_to_strbuf_, get_is_empty_) \
@@ -75,18 +78,18 @@ struct lwan_var_descriptor {
  * them, though, that's why they're exported. Eventually this will move to
  * something more opaque.
  */
-void	 lwan_append_int_to_strbuf(struct strbuf *buf, void *ptr);
+void	 lwan_append_int_to_strbuf(strbuf_t *buf, void *ptr);
 bool	 lwan_tpl_int_is_empty(void *ptr);
-void	 lwan_append_str_to_strbuf(struct strbuf *buf, void *ptr);
-void	 lwan_append_str_escaped_to_strbuf(struct strbuf *buf, void *ptr);
+void	 lwan_append_str_to_strbuf(strbuf_t *buf, void *ptr);
+void	 lwan_append_str_escaped_to_strbuf(strbuf_t *buf, void *ptr);
 bool	 lwan_tpl_str_is_empty(void *ptr);
-void	 lwan_append_double_to_strbuf(struct strbuf *buf, void *ptr);
+void	 lwan_append_double_to_strbuf(strbuf_t *buf, void *ptr);
 bool	 lwan_tpl_double_is_empty(void *ptr);
 
-struct lwan_tpl	*lwan_tpl_compile_string_full(const char *string, const struct lwan_var_descriptor *descriptor, enum lwan_tpl_flag flags);
-struct lwan_tpl	*lwan_tpl_compile_string(const char *string, const struct lwan_var_descriptor *descriptor);
-struct lwan_tpl	*lwan_tpl_compile_file(const char *filename, const struct lwan_var_descriptor *descriptor);
-struct strbuf	*lwan_tpl_apply(struct lwan_tpl *tpl, void *variables);
-struct strbuf	*lwan_tpl_apply_with_buffer(struct lwan_tpl *tpl, struct strbuf *buf, void *variables);
-void	 	 lwan_tpl_free(struct lwan_tpl *tpl);
+lwan_tpl_t	*lwan_tpl_compile_string_full(const char *string, const lwan_var_descriptor_t *descriptor, lwan_tpl_flag_t flags);
+lwan_tpl_t	*lwan_tpl_compile_string(const char *string, const lwan_var_descriptor_t *descriptor);
+lwan_tpl_t	*lwan_tpl_compile_file(const char *filename, const lwan_var_descriptor_t *descriptor);
+strbuf_t	*lwan_tpl_apply(lwan_tpl_t *tpl, void *variables);
+strbuf_t	*lwan_tpl_apply_with_buffer(lwan_tpl_t *tpl, strbuf_t *buf, void *variables);
+void	 	 lwan_tpl_free(lwan_tpl_t *tpl);
 

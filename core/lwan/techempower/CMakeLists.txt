@@ -22,6 +22,7 @@ if (MYSQL_INCLUDE_DIR AND SQLITE_FOUND)
 		add_executable(techempower
 			techempower.c
 			json.c
+			array.c
 			database.c
 		)
 

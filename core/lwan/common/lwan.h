@@ -32,7 +32,6 @@ extern "C" {
 #include "lwan-build-config.h"
 
 #include "hash.h"
-#include "lwan-array.h"
 #include "lwan-config.h"
 #include "lwan-coro.h"
 #include "lwan-status.h"
@@ -126,7 +125,19 @@ static ALWAYS_INLINE int16_t string_as_int16(const char *s)
 #define ENFORCE_STATIC_BUFFER_LENGTH	static
 #endif
 
-enum lwan_http_status {
+typedef struct lwan_t_			lwan_t;
+typedef struct lwan_module_t_		lwan_module_t;
+typedef struct lwan_key_value_t_	lwan_key_value_t;
+typedef struct lwan_request_t_		lwan_request_t;
+typedef struct lwan_response_t_		lwan_response_t;
+typedef struct lwan_thread_t_		lwan_thread_t;
+typedef struct lwan_url_map_t_		lwan_url_map_t;
+typedef struct lwan_value_t_		lwan_value_t;
+typedef struct lwan_config_t_		lwan_config_t;
+typedef struct lwan_proxy_t_		lwan_proxy_t;
+typedef struct lwan_connection_t_	lwan_connection_t;
+
+typedef enum {
     HTTP_OK = 200,
     HTTP_PARTIAL_CONTENT = 206,
     HTTP_MOVED_PERMANENTLY = 301,
@@ -145,9 +156,9 @@ enum lwan_http_status {
     HTTP_NOT_IMPLEMENTED = 501,
     HTTP_UNAVAILABLE = 503,
     HTTP_SERVER_TOO_HIGH = 520,
-};
+} lwan_http_status_t;
 
-enum lwan_handler_flags {
+typedef enum {
     HANDLER_PARSE_QUERY_STRING = 1<<0,
     HANDLER_PARSE_IF_MODIFIED_SINCE = 1<<1,
     HANDLER_PARSE_RANGE = 1<<2,
@@ -160,9 +171,9 @@ enum lwan_handler_flags {
     HANDLER_DATA_IS_HASH_TABLE = 1<<9,
 
     HANDLER_PARSE_MASK = 1<<0 | 1<<1 | 1<<2 | 1<<3 | 1<<4 | 1<<8
-};
+} lwan_handler_flags_t;
 
-enum lwan_request_flags {
+typedef enum {
     REQUEST_ALL_FLAGS          = -1,
     REQUEST_METHOD_GET         = 1<<0,
     REQUEST_METHOD_HEAD        = 1<<1,
@@ -178,106 +189,105 @@ enum lwan_request_flags {
     REQUEST_ALLOW_PROXY_REQS   = 1<<11,
     REQUEST_PROXIED            = 1<<12,
     REQUEST_ALLOW_CORS         = 1<<13,
-};
+} lwan_request_flags_t;
 
-enum lwan_connection_flags {
+typedef enum {
     CONN_MASK               = -1,
     CONN_KEEP_ALIVE         = 1<<0,
     CONN_IS_ALIVE           = 1<<1,
     CONN_SHOULD_RESUME_CORO = 1<<2,
     CONN_WRITE_EVENTS       = 1<<3,
     CONN_MUST_READ          = 1<<4,
-};
+} lwan_connection_flags_t;
 
-enum lwan_connection_coro_yield {
+typedef enum {
     CONN_CORO_ABORT = -1,
     CONN_CORO_MAY_RESUME = 0,
     CONN_CORO_FINISHED = 1
-};
+} lwan_connection_coro_yield_t;
 
-struct lwan_key_value {
+struct lwan_key_value_t_ {
     char *key;
     char *value;
 };
 
-struct lwan_request;
-struct lwan_response {
-    struct strbuf *buffer;
+struct lwan_response_t_ {
+    strbuf_t *buffer;
     const char *mime_type;
     size_t content_length;
-    struct lwan_key_value *headers;
+    lwan_key_value_t *headers;
 
     struct {
-        enum lwan_http_status (*callback)(struct lwan_request *request, void *data);
+        lwan_http_status_t (*callback)(lwan_request_t *request, void *data);
         void *data;
         void *priv;
     } stream;
 };
 
-struct lwan_value {
+struct lwan_value_t_ {
     char *value;
     size_t len;
 };
 
-struct lwan_connection {
+struct lwan_connection_t_ {
     /* This structure is exactly 32-bytes on x86-64. If it is changed,
      * make sure the scheduler (lwan.c) is updated as well. */
-    enum lwan_connection_flags flags;
+    lwan_connection_flags_t flags;
     unsigned int time_to_die;
-    struct coro *coro;
-    struct lwan_thread *thread;
+    coro_t *coro;
+    lwan_thread_t *thread;
     int prev, next; /* for death queue */
 };
 
-struct lwan_proxy {
+struct lwan_proxy_t_ {
     union {
         struct sockaddr_in ipv4;
         struct sockaddr_in6 ipv6;
     } from, to;
 };
 
-DEFINE_ARRAY_TYPE(lwan_key_value_array, struct lwan_key_value)
-
-struct lwan_request {
-    enum lwan_request_flags flags;
+struct lwan_request_t_ {
+    lwan_request_flags_t flags;
     int fd;
-    struct lwan_value url;
-    struct lwan_value original_url;
-    struct lwan_connection *conn;
-    struct lwan_proxy *proxy;
+    lwan_value_t url;
+    lwan_value_t original_url;
+    lwan_connection_t *conn;
+    lwan_proxy_t *proxy;
 
-    struct lwan_key_value_array query_params, post_data, cookies;
-
+    struct {
+        lwan_key_value_t *base;
+        size_t len;
+    } query_params, post_data, cookies;
     struct {
         time_t if_modified_since;
         struct {
           off_t from;
           off_t to;
         } range;
-        struct lwan_value *body;
-        struct lwan_value *content_type;
+        lwan_value_t *body;
+        lwan_value_t *content_type;
     } header;
-    struct lwan_response response;
+    lwan_response_t response;
 };
 
-struct lwan_module {
+struct lwan_module_t_ {
     void *(*init)(const char *prefix, void *args);
     void *(*init_from_hash)(const char *prefix, const struct hash *hash);
     void (*shutdown)(void *data);
-    bool (*parse_conf)(void *data, struct config *config);
-    enum lwan_http_status (*handle)(struct lwan_request *request, struct lwan_response *response, void *data);
-    enum lwan_handler_flags flags;
+    bool (*parse_conf)(void *data, config_t *config);
+    lwan_http_status_t (*handle)(lwan_request_t *request, lwan_response_t *response, void *data);
+    lwan_handler_flags_t flags;
 };
 
-struct lwan_url_map {
-    enum lwan_http_status (*handler)(struct lwan_request *request, struct lwan_response *response, void *data);
+struct lwan_url_map_t_ {
+    lwan_http_status_t (*handler)(lwan_request_t *request, lwan_response_t *response, void *data);
     void *data;
 
     const char *prefix;
     size_t prefix_len;
-    enum lwan_handler_flags flags;
+    lwan_handler_flags_t flags;
 
-    const struct lwan_module *module;
+    const lwan_module_t *module;
     void *args;
 
     struct {
@@ -286,8 +296,8 @@ struct lwan_url_map {
     } authorization;
 };
 
-struct lwan_thread {
-    struct lwan *lwan;
+struct lwan_thread_t_ {
+    lwan_t *lwan;
     struct {
         char date[30];
         char expires[30];
@@ -300,7 +310,7 @@ struct lwan_thread {
     void *barrier;
 };
 
-struct lwan_config {
+struct lwan_config_t_ {
     char *listener;
     char *error_template;
     char *config_file_path;
@@ -314,62 +324,62 @@ struct lwan_config {
     bool allow_cors;
 };
 
-struct lwan {
-    struct lwan_trie url_map_trie;
-    struct lwan_connection *conns;
+struct lwan_t_ {
+    lwan_trie_t url_map_trie;
+    lwan_connection_t *conns;
 
     struct {
-        struct lwan_thread *threads;
+        lwan_thread_t *threads;
         unsigned int max_fd;
         unsigned short count;
     } thread;
 
     struct hash *module_registry;
-    struct lwan_config config;
+    lwan_config_t config;
     int main_socket;
 };
 
-void lwan_set_url_map(struct lwan *l, const struct lwan_url_map *map);
-void lwan_main_loop(struct lwan *l);
+void lwan_set_url_map(lwan_t *l, const lwan_url_map_t *map);
+void lwan_main_loop(lwan_t *l);
 
-void lwan_response(struct lwan_request *request, enum lwan_http_status status);
-void lwan_default_response(struct lwan_request *request, enum lwan_http_status status);
-size_t lwan_prepare_response_header(struct lwan_request *request, enum lwan_http_status status, char header_buffer[], size_t header_buffer_size)
+void lwan_response(lwan_request_t *request, lwan_http_status_t status);
+void lwan_default_response(lwan_request_t *request, lwan_http_status_t status);
+size_t lwan_prepare_response_header(lwan_request_t *request, lwan_http_status_t status, char header_buffer[], size_t header_buffer_size)
     __attribute__((warn_unused_result));
 
-const char *lwan_request_get_post_param(struct lwan_request *request, const char *key)
+const char *lwan_request_get_post_param(lwan_request_t *request, const char *key)
     __attribute__((warn_unused_result));
-const char *lwan_request_get_query_param(struct lwan_request *request, const char *key)
+const char *lwan_request_get_query_param(lwan_request_t *request, const char *key)
     __attribute__((warn_unused_result));
-const char * lwan_request_get_cookie(struct lwan_request *request, const char *key)
+const char * lwan_request_get_cookie(lwan_request_t *request, const char *key)
     __attribute__((warn_unused_result));
 
-bool lwan_response_set_chunked(struct lwan_request *request, enum lwan_http_status status);
-void lwan_response_send_chunk(struct lwan_request *request);
+bool lwan_response_set_chunked(lwan_request_t *request, lwan_http_status_t status);
+void lwan_response_send_chunk(lwan_request_t *request);
 
-bool lwan_response_set_event_stream(struct lwan_request *request, enum lwan_http_status status);
-void lwan_response_send_event(struct lwan_request *request, const char *event);
+bool lwan_response_set_event_stream(lwan_request_t *request, lwan_http_status_t status);
+void lwan_response_send_event(lwan_request_t *request, const char *event);
 
-const char *lwan_http_status_as_string(enum lwan_http_status status)
+const char *lwan_http_status_as_string(lwan_http_status_t status)
     __attribute__((pure)) __attribute__((warn_unused_result));
-const char *lwan_http_status_as_string_with_code(enum lwan_http_status status)
+const char *lwan_http_status_as_string_with_code(lwan_http_status_t status)
     __attribute__((pure)) __attribute__((warn_unused_result));
-const char *lwan_http_status_as_descriptive_string(enum lwan_http_status status)
+const char *lwan_http_status_as_descriptive_string(lwan_http_status_t status)
     __attribute__((pure)) __attribute__((warn_unused_result));
 const char *lwan_determine_mime_type_for_file_name(const char *file_name)
     __attribute__((pure)) __attribute__((warn_unused_result));
 
-void lwan_init(struct lwan *l);
-void lwan_init_with_config(struct lwan *l, const struct lwan_config *config);
-void lwan_shutdown(struct lwan *l);
+void lwan_init(lwan_t *l);
+void lwan_init_with_config(lwan_t *l, const lwan_config_t *config);
+void lwan_shutdown(lwan_t *l);
 
-const struct lwan_config *lwan_get_default_config(void);
+const lwan_config_t *lwan_get_default_config(void);
 
-int lwan_connection_get_fd(const struct lwan *lwan, const struct lwan_connection *conn)
+int lwan_connection_get_fd(const lwan_t *lwan, const lwan_connection_t *conn)
     __attribute__((pure)) __attribute__((warn_unused_result));
 
 
-const char *lwan_request_get_remote_address(struct lwan_request *request,
+const char *lwan_request_get_remote_address(lwan_request_t *request,
             char buffer[ENFORCE_STATIC_BUFFER_LENGTH INET6_ADDRSTRLEN])
     __attribute__((warn_unused_result));
 

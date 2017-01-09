@@ -33,7 +33,6 @@
 #cmakedefine HAVE_BUILTIN_CPU_INIT
 #cmakedefine HAVE_BUILTIN_IA32_CRC32
 #cmakedefine HAVE_BUILTIN_MUL_OVERFLOW
-#cmakedefine HAVE_BUILTIN_ADD_OVERFLOW
 
 /* C11 _Static_assert() */
 #cmakedefine HAVE_STATIC_ASSERT

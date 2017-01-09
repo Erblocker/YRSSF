@@ -34,8 +34,8 @@
 /* Set to 0 to disable */
 #define QUERIES_PER_HOUR 10000
 
-struct ip_info {
-    struct cache_entry base;
+struct ip_info_t {
+    struct cache_entry_t base;
     struct {
         char *code;
         char *name;
@@ -52,24 +52,24 @@ struct ip_info {
     const char *callback;
 };
 
-struct template_mime {
-    struct lwan_tpl *tpl;
+struct template_mime_t {
+    lwan_tpl_t *tpl;
     const char *mime_type;
 };
 
-static const struct lwan_var_descriptor template_descriptor[] = {
-    TPL_VAR_STR(struct ip_info, country.code),
-    TPL_VAR_STR(struct ip_info, country.name),
-    TPL_VAR_STR(struct ip_info, region.code),
-    TPL_VAR_STR(struct ip_info, region.name),
-    TPL_VAR_STR(struct ip_info, city.name),
-    TPL_VAR_STR(struct ip_info, city.zip_code),
-    TPL_VAR_DOUBLE(struct ip_info, latitude),
-    TPL_VAR_DOUBLE(struct ip_info, longitude),
-    TPL_VAR_STR(struct ip_info, metro.code),
-    TPL_VAR_STR(struct ip_info, metro.area),
-    TPL_VAR_STR(struct ip_info, ip),
-    TPL_VAR_STR(struct ip_info, callback),
+static const lwan_var_descriptor_t template_descriptor[] = {
+    TPL_VAR_STR(struct ip_info_t, country.code),
+    TPL_VAR_STR(struct ip_info_t, country.name),
+    TPL_VAR_STR(struct ip_info_t, region.code),
+    TPL_VAR_STR(struct ip_info_t, region.name),
+    TPL_VAR_STR(struct ip_info_t, city.name),
+    TPL_VAR_STR(struct ip_info_t, city.zip_code),
+    TPL_VAR_DOUBLE(struct ip_info_t, latitude),
+    TPL_VAR_DOUBLE(struct ip_info_t, longitude),
+    TPL_VAR_STR(struct ip_info_t, metro.code),
+    TPL_VAR_STR(struct ip_info_t, metro.area),
+    TPL_VAR_STR(struct ip_info_t, ip),
+    TPL_VAR_STR(struct ip_info_t, callback),
     TPL_VAR_SENTINEL
 };
 
@@ -144,7 +144,7 @@ union ip_to_octet {
     in_addr_t ip;
 };
 
-struct ip_net {
+struct ip_net_t {
     union ip_to_octet ip;
     union ip_to_octet mask;
 };
@@ -153,7 +153,7 @@ struct ip_net {
 #define ADDRESS(o1, o2, o3, o4) \
     { .octet[0] = o1, .octet[1] = o2, .octet[2] = o3, .octet[3] = o4 }
 
-static const struct ip_net reserved_ips[] = {
+static const struct ip_net_t reserved_ips[] = {
     {ADDRESS(0, 0, 0, 0), ADDRESS(255, 0, 0, 0)},
     {ADDRESS(10, 0, 0, 0), ADDRESS(255, 0, 0, 0)},
     {ADDRESS(100, 64, 0, 0), ADDRESS(255, 192, 0, 0)},
@@ -176,19 +176,19 @@ static const struct ip_net reserved_ips[] = {
 
 
 #if QUERIES_PER_HOUR != 0
-struct query_limit {
-    struct cache_entry base;
+struct query_limit_t {
+    struct cache_entry_t base;
     unsigned queries;
 };
 
-static struct cache *query_limit;
+static struct cache_t *query_limit;
 #endif
 
-static struct cache *cache = NULL;
+static struct cache_t *cache = NULL;
 static sqlite3 *db = NULL;
 
 static bool
-net_contains_ip(const struct ip_net *net, in_addr_t ip)
+net_contains_ip(const struct ip_net_t *net, in_addr_t ip)
 {
     union ip_to_octet _ip = { .ip = ip };
     return (net->ip.octet[0] & net->mask.octet[0]) == (_ip.octet[0] & net->mask.octet[0]) && \
@@ -209,10 +209,10 @@ is_reserved_ip(in_addr_t ip)
 }
 
 static void
-destroy_ipinfo(struct cache_entry *entry,
+destroy_ipinfo(struct cache_entry_t *entry,
             void *context __attribute__((unused)))
 {
-    struct ip_info *ip_info = (struct ip_info *)entry;
+    struct ip_info_t *ip_info = (struct ip_info_t *)entry;
 
     if (!ip_info)
         return;
@@ -238,11 +238,11 @@ text_column_helper(sqlite3_stmt *stmt, int ind)
     return value ? strdup((char *)value) : NULL;
 }
 
-static struct cache_entry *
+static struct cache_entry_t *
 create_ipinfo(const char *key, void *context __attribute__((unused)))
 {
     sqlite3_stmt *stmt;
-    struct ip_info *ip_info = NULL;
+    struct ip_info_t *ip_info = NULL;
     struct in_addr addr;
 
     if (UNLIKELY(!inet_aton(key, &addr)))
@@ -293,30 +293,30 @@ create_ipinfo(const char *key, void *context __attribute__((unused)))
 end:
     sqlite3_finalize(stmt);
 end_no_finalize:
-    return (struct cache_entry *)ip_info;
+    return (struct cache_entry_t *)ip_info;
 }
 
 #if QUERIES_PER_HOUR != 0
-static struct cache_entry *
+static struct cache_entry_t *
 create_query_limit(const char *key __attribute__((unused)),
             void *context __attribute__((unused)))
 {
-    struct query_limit *entry = malloc(sizeof(*entry));
+    struct query_limit_t *entry = malloc(sizeof(*entry));
     if (LIKELY(entry))
         entry->queries = 0;
-    return (struct cache_entry *)entry;
+    return (struct cache_entry_t *)entry;
 }
 
 static void
-destroy_query_limit(struct cache_entry *entry,
+destroy_query_limit(struct cache_entry_t *entry,
             void *context __attribute__((unused)))
 {
     free(entry);
 }
 #endif
 
-static struct ip_info *
-internal_query(struct lwan_request *request, const char *ip_address)
+static struct ip_info_t *
+internal_query(lwan_request_t *request, const char *ip_address)
 {
     const char *query;
 
@@ -329,7 +329,7 @@ internal_query(struct lwan_request *request, const char *ip_address)
     if (UNLIKELY(!query))
         return NULL;
 
-    return (struct ip_info *)cache_coro_get_and_ref_entry(cache,
+    return (struct ip_info_t *)cache_coro_get_and_ref_entry(cache,
                 request->conn->coro, query);
 }
 
@@ -338,9 +338,9 @@ static bool is_rate_limited(const char *ip_address)
 {
     bool limited;
     int error;
-    struct query_limit *limit;
+    struct query_limit_t *limit;
 
-    limit = (struct query_limit *)
+    limit = (struct query_limit_t *)
                 cache_get_and_ref_entry(query_limit, ip_address, &error);
     if (!limit)
         return true;
@@ -352,14 +352,14 @@ static bool is_rate_limited(const char *ip_address)
 }
 #endif
 
-static enum lwan_http_status
-templated_output(struct lwan_request *request,
-                 struct lwan_response *response,
+static lwan_http_status_t
+templated_output(lwan_request_t *request,
+                 lwan_response_t *response,
                  void *data)
 {
-    const struct template_mime *tm = data;
+    const struct template_mime_t *tm = data;
     const char *ip_address;
-    struct ip_info *info;
+    struct ip_info_t *info;
     char ip_address_buf[INET6_ADDRSTRLEN];
 
     ip_address = lwan_request_get_remote_address(request, ip_address_buf);
@@ -376,7 +376,7 @@ templated_output(struct lwan_request *request,
         return HTTP_NOT_FOUND;
 
     const char *callback = lwan_request_get_query_param(request, "callback");
-    struct ip_info info_with_callback = *info;
+    struct ip_info_t info_with_callback = *info;
     info_with_callback.callback = callback;
 
     lwan_tpl_apply_with_buffer(tm->tpl, response->buffer,
@@ -386,31 +386,31 @@ templated_output(struct lwan_request *request,
     return HTTP_OK;
 }
 
-static struct template_mime
+static struct template_mime_t
 compile_template(const char *template, const char *mime_type)
 {
-    struct lwan_tpl *tpl = lwan_tpl_compile_string(template, template_descriptor);
+    lwan_tpl_t *tpl = lwan_tpl_compile_string(template, template_descriptor);
 
     if (!tpl) {
         lwan_status_critical("Could not compile template for mime-type %s",
             mime_type);
     }
 
-    return (struct template_mime) { .tpl = tpl, .mime_type = mime_type };
+    return (struct template_mime_t) { .tpl = tpl, .mime_type = mime_type };
 }
 
 int
 main(void)
 {
-    struct lwan l;
+    lwan_t l;
 
     lwan_init(&l);
 
-    struct template_mime json_tpl = compile_template(json_template_str,
+    struct template_mime_t json_tpl = compile_template(json_template_str,
         "application/json; charset=UTF-8");
-    struct template_mime csv_tpl = compile_template(csv_template_str,
+    struct template_mime_t csv_tpl = compile_template(csv_template_str,
         "application/csv; charset=UTF-8");
-    struct template_mime xml_tpl = compile_template(xml_template_str,
+    struct template_mime_t xml_tpl = compile_template(xml_template_str,
         "text/plain; charset=UTF-8");
 
     int result = sqlite3_open_v2("./db/ipdb.sqlite", &db,
@@ -429,7 +429,7 @@ main(void)
     lwan_status_info("Rate-limiting disabled");
 #endif
 
-    const struct lwan_url_map default_map[] = {
+    const lwan_url_map_t default_map[] = {
         { .prefix = "/json/", .handler = templated_output, .data = &json_tpl },
         { .prefix = "/xml/", .handler = templated_output, .data = &xml_tpl },
         { .prefix = "/csv/", .handler = templated_output, .data = &csv_tpl },

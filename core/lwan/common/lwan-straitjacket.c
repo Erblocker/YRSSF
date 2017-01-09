@@ -169,12 +169,12 @@ static void abort_on_open_directories(void)
     closedir(dir);
 }
 #else
-static void abort_on_open_directories(void)
+static bool abort_on_open_directories(void)
 {
 }
 #endif
 
-void lwan_straitjacket_enforce(struct config *c, struct config_line *l)
+void lwan_straitjacket_enforce(config_t *c, config_line_t *l)
 {
     char *user_name = NULL;
     char *chroot_path = NULL;
@@ -190,12 +190,12 @@ void lwan_straitjacket_enforce(struct config *c, struct config_line *l)
         switch (l->type) {
         case CONFIG_LINE_TYPE_LINE:
             /* TODO: limit_syscalls */
-            if (streq(l->key, "user")) {
-                user_name = strdupa(l->value);
-            } else if (streq(l->key, "chroot")) {
-                chroot_path = strdupa(l->value);
+            if (streq(l->line.key, "user")) {
+                user_name = strdupa(l->line.value);
+            } else if (streq(l->line.key, "chroot")) {
+                chroot_path = strdupa(l->line.value);
             } else {
-                config_error(c, "Invalid key: %s", l->key);
+                config_error(c, "Invalid key: %s", l->line.key);
                 return;
             }
             break;

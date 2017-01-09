@@ -105,7 +105,7 @@ bool parse_bool(const char *value, bool default_value)
     return parse_int(value, default_value);
 }
 
-bool config_error(struct config *conf, const char *fmt, ...)
+bool config_error(config_t *conf, const char *fmt, ...)
 {
     va_list values;
     int len;
@@ -159,7 +159,7 @@ static char *find_line_end(char *line)
     return (char *)rawmemchr(line, '\0') - 1;
 }
 
-static bool parse_section(char *line, struct config_line *l, char *bracket)
+static bool parse_section(char *line, config_line_t *l, char *bracket)
 {
     char *name, *param;
     char *space = strchr(line, ' ');
@@ -171,8 +171,8 @@ static bool parse_section(char *line, struct config_line *l, char *bracket)
     name = remove_trailing_spaces(remove_leading_spaces(line));
     param = remove_trailing_spaces(remove_leading_spaces(space + 1));
 
-    l->name = name;
-    l->param = param;
+    l->section.name = name;
+    l->section.param = param;
     l->type = CONFIG_LINE_TYPE_SECTION;
 
     return true;
@@ -187,7 +187,7 @@ static char *replace_space_with_underscore(char *line)
     return line;
 }
 
-static bool config_fgets(struct config *conf, char *buffer, size_t buffer_len)
+static bool config_fgets(config_t *conf, char *buffer, size_t buffer_len)
 {
     assert(buffer_len <= INT_MAX);
     if (!fgets(buffer, (int)buffer_len, conf->file))
@@ -207,7 +207,7 @@ static bool config_fgets(struct config *conf, char *buffer, size_t buffer_len)
     return true;
 }
 
-static bool parse_multiline(struct config *c, struct config_line *l)
+static bool parse_multiline(config_t *c, config_line_t *l)
 {
     char buffer[1024];
 
@@ -219,7 +219,7 @@ static bool parse_multiline(struct config *c, struct config_line *l)
     while (config_fgets(c, buffer, sizeof(buffer))) {
         char *tmp = remove_trailing_spaces(remove_leading_spaces(buffer));
         if (streq(tmp, "'''")) {
-            l->value = strbuf_get_buffer(c->strbuf);
+            l->line.value = strbuf_get_buffer(c->strbuf);
             return true;
         }
 
@@ -237,23 +237,23 @@ static bool parse_multiline(struct config *c, struct config_line *l)
     return false;
 }
 
-static bool parse_line(struct config *c, char *line, struct config_line *l, char *equal)
+static bool parse_line(config_t *c, char *line, config_line_t *l, char *equal)
 {
     *equal = '\0';
     line = remove_leading_spaces(line);
     line = remove_trailing_spaces(line);
 
-    l->key = replace_space_with_underscore(line);
-    l->value = remove_leading_spaces(equal + 1);
+    l->line.key = replace_space_with_underscore(line);
+    l->line.value = remove_leading_spaces(equal + 1);
     l->type = CONFIG_LINE_TYPE_LINE;
 
-    if (!streq(l->value, "'''"))
+    if (!streq(l->line.value, "'''"))
         return true;
 
     return parse_multiline(c, l);
 }
 
-static bool find_section_end(struct config *config, struct config_line *line, int recursion_level)
+static bool find_section_end(config_t *config, config_line_t *line, int recursion_level)
 {
     if (recursion_level > 10) {
         config_error(config, "Recursion level too deep");
@@ -276,7 +276,7 @@ static bool find_section_end(struct config *config, struct config_line *line, in
     return false;
 }
 
-bool config_skip_section(struct config *conf, struct config_line *line)
+bool config_skip_section(config_t *conf, config_line_t *line)
 {
     if (conf->error_message)
         return false;
@@ -285,8 +285,8 @@ bool config_skip_section(struct config *conf, struct config_line *line)
     return find_section_end(conf, line, 0);
 }
 
-bool config_isolate_section(struct config *current_conf,
-    struct config_line *current_line, struct config *isolated)
+bool config_isolate_section(config_t *current_conf,
+    config_line_t *current_line, config_t *isolated)
 {
     long startpos, endpos;
     bool r = false;
@@ -332,7 +332,7 @@ resetpos:
     return r;
 }
 
-bool config_read_line(struct config *conf, struct config_line *l)
+bool config_read_line(config_t *conf, config_line_t *l)
 {
     char *line, *line_end;
 
@@ -373,7 +373,7 @@ bool config_read_line(struct config *conf, struct config_line *l)
     return true;
 }
 
-bool config_open(struct config *conf, const char *path)
+bool config_open(config_t *conf, const char *path)
 {
     if (!conf)
         return false;
@@ -407,7 +407,7 @@ error_no_strbuf:
     return false;
 }
 
-void config_close(struct config *conf)
+void config_close(config_t *conf)
 {
     if (!conf)
         return;

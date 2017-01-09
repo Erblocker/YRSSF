@@ -24,6 +24,7 @@
 #include "lwan-config.h"
 #include "lwan-template.h"
 
+#include "array.h"
 #include "database.h"
 #include "json.h"
 
@@ -32,14 +33,12 @@ static const char random_number_query[] = "SELECT randomNumber FROM World WHERE 
 
 struct Fortune {
     struct {
-        lwan_tpl_list_generator generator;
+        lwan_tpl_list_generator_t generator;
 
         int id;
         char *message;
     } item;
 };
-
-DEFINE_ARRAY_TYPE(fortune_array, struct Fortune)
 
 static const char fortunes_template_str[] = "<!DOCTYPE html>" \
 "<html>" \
@@ -54,25 +53,25 @@ static const char fortunes_template_str[] = "<!DOCTYPE html>" \
 "</body>" \
 "</html>";
 
-static int fortune_list_generator(struct coro *coro);
+static int fortune_list_generator(coro_t *coro);
 
-static const struct lwan_var_descriptor fortune_item_desc[] = {
+static const lwan_var_descriptor_t fortune_item_desc[] = {
     TPL_VAR_INT(struct Fortune, item.id),
     TPL_VAR_STR_ESCAPE(struct Fortune, item.message),
     TPL_VAR_SENTINEL
 };
 
-static const struct lwan_var_descriptor fortune_desc[] = {
+static const lwan_var_descriptor_t fortune_desc[] = {
     TPL_VAR_SEQUENCE(struct Fortune, item,
                      fortune_list_generator, fortune_item_desc),
     TPL_VAR_SENTINEL
 };
 
 static struct db *database;
-static struct lwan_tpl *fortune_tpl;
+static lwan_tpl_t *fortune_tpl;
 
-static enum lwan_http_status
-json_response(struct lwan_response *response, JsonNode *node)
+static lwan_http_status_t
+json_response(lwan_response_t *response, JsonNode *node)
 {
     size_t length;
     char *serialized;
@@ -89,9 +88,9 @@ json_response(struct lwan_response *response, JsonNode *node)
     return HTTP_OK;
 }
 
-static enum lwan_http_status
-json(struct lwan_request *request __attribute__((unused)),
-     struct lwan_response *response,
+static lwan_http_status_t
+json(lwan_request_t *request __attribute__((unused)),
+     lwan_response_t *response,
      void *data __attribute__((unused)))
 {
     JsonNode *hello = json_mkobject();
@@ -128,9 +127,9 @@ out:
     return object;
 }
 
-static enum lwan_http_status
-db(struct lwan_request *request __attribute__((unused)),
-   struct lwan_response *response,
+static lwan_http_status_t
+db(lwan_request_t *request __attribute__((unused)),
+   lwan_response_t *response,
    void *data __attribute__((unused)))
 {
     struct db_row rows[1] = {{ .kind = 'i' }};
@@ -149,9 +148,9 @@ db(struct lwan_request *request __attribute__((unused)),
     return json_response(response, object);
 }
 
-static enum lwan_http_status
-queries(struct lwan_request *request,
-        struct lwan_response *response,
+static lwan_http_status_t
+queries(lwan_request_t *request,
+        lwan_response_t *response,
         void *data __attribute__((unused)))
 {
     const char *queries_str = lwan_request_get_query_param(request, "queries");
@@ -197,9 +196,9 @@ out_no_array:
     return HTTP_INTERNAL_ERROR;
 }
 
-static enum lwan_http_status
-plaintext(struct lwan_request *request __attribute__((unused)),
-          struct lwan_response *response,
+static lwan_http_status_t
+plaintext(lwan_request_t *request __attribute__((unused)),
+          lwan_response_t *response,
           void *data __attribute__((unused)))
 {
     strbuf_set_static(response->buffer, hello_world, sizeof(hello_world) - 1);
@@ -210,8 +209,8 @@ plaintext(struct lwan_request *request __attribute__((unused)),
 
 static int fortune_compare(const void *a, const void *b)
 {
-    const struct Fortune *fortune_a = (const struct Fortune *)a;
-    const struct Fortune *fortune_b = (const struct Fortune *)b;
+    const struct Fortune *fortune_a = *(const struct Fortune **)a;
+    const struct Fortune *fortune_b = *(const struct Fortune **)b;
     size_t a_len = strlen(fortune_a->item.message);
     size_t b_len = strlen(fortune_b->item.message);
 
@@ -226,32 +225,29 @@ static int fortune_compare(const void *a, const void *b)
     return cmp > 0;
 }
 
-static bool append_fortune(struct coro *coro, struct fortune_array *fortunes,
+static bool append_fortune(coro_t *coro, struct array *fortunes,
                            int id, const char *message)
 {
     struct Fortune *fortune;
-    char *message_copy;
 
-    message_copy = coro_strdup(coro, message);
-    if (UNLIKELY(!message_copy))
-        return false;
-
-    fortune = fortune_array_append(fortunes);
+    fortune = coro_malloc(coro, sizeof(*fortune));
     if (UNLIKELY(!fortune))
         return false;
 
     fortune->item.id = id;
-    fortune->item.message = message_copy;
+    fortune->item.message = coro_strdup(coro, message);
+    if (UNLIKELY(!fortune->item.message))
+        return false;
 
-    return true;
+    return array_append(fortunes, fortune) >= 0;
 }
 
-static int fortune_list_generator(struct coro *coro)
+static int fortune_list_generator(coro_t *coro)
 {
     static const char fortune_query[] = "SELECT * FROM Fortune";
     char fortune_buffer[256];
     struct Fortune *fortune;
-    struct fortune_array fortunes;
+    struct array fortunes;
     struct db_stmt *stmt;
     size_t i;
 
@@ -259,7 +255,7 @@ static int fortune_list_generator(struct coro *coro)
     if (UNLIKELY(!stmt))
         return 0;
 
-    fortune_array_init(&fortunes);
+    array_init(&fortunes, 16);
 
     struct db_row results[] = {
         { .kind = 'i' },
@@ -275,25 +271,25 @@ static int fortune_list_generator(struct coro *coro)
                             "Additional fortune added at request time."))
         goto out;
 
-    fortune_array_sort(&fortunes, fortune_compare);
+    array_sort(&fortunes, fortune_compare);
 
     fortune = coro_get_data(coro);
-    for (i = 0; i < fortunes.base.elements; i++) {
-        struct Fortune *f = &((struct Fortune *)fortunes.base.base)[i];
+    for (i = 0; i < fortunes.count; i++) {
+        struct Fortune *f = fortunes.array[i];
         fortune->item.id = f->item.id;
         fortune->item.message = f->item.message;
         coro_yield(coro, 1);
     }
 
 out:
-    fortune_array_reset(&fortunes);
+    array_free_array(&fortunes);
     db_stmt_finalize(stmt);
     return 0;
 }
 
-static enum lwan_http_status
-fortunes(struct lwan_request *request __attribute__((unused)),
-         struct lwan_response *response,
+static lwan_http_status_t
+fortunes(lwan_request_t *request __attribute__((unused)),
+         lwan_response_t *response,
          void *data __attribute__((unused)))
 {
     struct Fortune fortune;
@@ -309,7 +305,7 @@ fortunes(struct lwan_request *request __attribute__((unused)),
 int
 main(void)
 {
-    static const struct lwan_url_map url_map[] = {
+    static const lwan_url_map_t url_map[] = {
         { .prefix = "/json", .handler = json },
         { .prefix = "/db", .handler = db },
         { .prefix = "/queries", .handler = queries },
@@ -317,7 +313,7 @@ main(void)
         { .prefix = "/fortunes", .handler = fortunes },
         { .prefix = NULL }
     };
-    struct lwan l;
+    lwan_t l;
 
     lwan_init(&l);
 

@@ -27,7 +27,6 @@
 
 #include "lwan-private.h"
 
-#include "lwan-array.h"
 #include "lwan-coro.h"
 
 #ifdef USE_VALGRIND
@@ -43,32 +42,34 @@
 static_assert(DEFAULT_BUFFER_SIZE < (CORO_STACK_MIN + PTHREAD_STACK_MIN),
     "Request buffer fits inside coroutine stack");
 
+#define DEFER_MAX		16
+
+typedef struct coro_defer_t_	coro_defer_t;
+
 typedef void (*defer_func)();
 
-struct coro_defer {
+struct coro_defer_t_ {
     defer_func func;
     void *data1;
     void *data2;
 };
 
-DEFINE_ARRAY_TYPE(coro_defer_array, struct coro_defer)
-
-struct coro {
-    struct coro_switcher *switcher;
-    coro_context context;
+struct coro_t_ {
+    coro_switcher_t *switcher;
+    coro_context_t context;
     int yield_value;
 
 #if !defined(NDEBUG) && defined(USE_VALGRIND)
     unsigned int vg_stack_id;
 #endif
 
-    struct coro_defer_array defer;
+    coro_defer_t *defer;
     void *data;
 
     bool ended;
 };
 
-static void coro_entry_point(struct coro *data, coro_function_t func);
+static void coro_entry_point(coro_t *data, coro_function_t func);
 
 /*
  * This swapcontext() implementation was obtained from glibc and modified
@@ -82,7 +83,7 @@ static void coro_entry_point(struct coro *data, coro_function_t func);
  */
 #if defined(__x86_64__)
 void __attribute__((noinline))
-coro_swapcontext(coro_context *current, coro_context *other);
+coro_swapcontext(coro_context_t *current, coro_context_t *other);
     asm(
     ".text\n\t"
     ".p2align 4\n\t"
@@ -118,7 +119,7 @@ coro_swapcontext(coro_context *current, coro_context *other);
     "jmp    *%rcx\n\t");
 #elif defined(__i386__)
 void __attribute__((noinline))
-coro_swapcontext(coro_context *current, coro_context *other);
+coro_swapcontext(coro_context_t *current, coro_context_t *other);
     asm(
     ".text\n\t"
     ".p2align 16\n\t"
@@ -154,7 +155,7 @@ coro_swapcontext(coro_context *current, coro_context *other);
 #endif
 
 static void
-coro_entry_point(struct coro *coro, coro_function_t func)
+coro_entry_point(coro_t *coro, coro_function_t func)
 {
     int return_value = func(coro);
     coro->ended = true;
@@ -162,20 +163,25 @@ coro_entry_point(struct coro *coro, coro_function_t func)
 }
 
 static void
-coro_run_deferred(struct coro *coro)
+run_deferred(coro_defer_t *defer, coro_defer_t *last)
 {
-    struct lwan_array *array = (struct lwan_array *)&coro->defer;
-    struct coro_defer *defers = array->base;
+    if (!defer->func || defer == last)
+        return;
 
-    for (size_t i = array->elements; i != 0; i--) {
-        struct coro_defer *defer = &defers[i - 1];
+    run_deferred(defer + 1, last);
 
-        defer->func(defer->data1, defer->data2);
-    }
+    defer->func(defer->data1, defer->data2);
+    defer->func = NULL;
+}
+
+static void
+coro_run_deferred(coro_t *coro)
+{
+    run_deferred(coro->defer, coro->defer + DEFER_MAX);
 }
 
 void
-coro_reset(struct coro *coro, coro_function_t func, void *data)
+coro_reset(coro_t *coro, coro_function_t func, void *data)
 {
     unsigned char *stack = (unsigned char *)(coro + 1);
 
@@ -183,7 +189,6 @@ coro_reset(struct coro *coro, coro_function_t func, void *data)
     coro->data = data;
 
     coro_run_deferred(coro);
-    coro_defer_array_reset(&coro->defer);
 
 #if defined(__x86_64__)
     coro->context[6 /* RDI */] = (uintptr_t) coro;
@@ -214,14 +219,15 @@ coro_reset(struct coro *coro, coro_function_t func, void *data)
 #endif
 }
 
-ALWAYS_INLINE struct coro *
-coro_new(struct coro_switcher *switcher, coro_function_t function, void *data)
+ALWAYS_INLINE coro_t *
+coro_new(coro_switcher_t *switcher, coro_function_t function, void *data)
 {
-    struct coro *coro = malloc(sizeof(*coro) + CORO_STACK_MIN);
-    if (UNLIKELY(!coro))
+    coro_t *coro = malloc(sizeof(*coro) + CORO_STACK_MIN);
+    if (!coro)
         return NULL;
 
-    if (UNLIKELY(coro_defer_array_init(&coro->defer) < 0)) {
+    coro->defer = calloc(DEFER_MAX, sizeof(coro_defer_t));
+    if (UNLIKELY(!coro->defer)) {
         free(coro);
         return NULL;
     }
@@ -238,7 +244,7 @@ coro_new(struct coro_switcher *switcher, coro_function_t function, void *data)
 }
 
 ALWAYS_INLINE void *
-coro_get_data(struct coro *coro)
+coro_get_data(coro_t *coro)
 {
     assert(coro);
 
@@ -246,7 +252,7 @@ coro_get_data(struct coro *coro)
 }
 
 ALWAYS_INLINE int
-coro_resume(struct coro *coro)
+coro_resume(coro_t *coro)
 {
     assert(coro);
     assert(coro->ended == false);
@@ -257,7 +263,7 @@ coro_resume(struct coro *coro)
         memcpy(&coro->context, &coro->switcher->callee,
                     sizeof(coro->context));
 #else
-    coro_context prev_caller;
+    coro_context_t prev_caller;
 
     memcpy(&prev_caller, &coro->switcher->caller, sizeof(prev_caller));
     coro_swapcontext(&coro->switcher->caller, &coro->context);
@@ -273,7 +279,7 @@ coro_resume(struct coro *coro)
 }
 
 ALWAYS_INLINE int
-coro_resume_value(struct coro *coro, int value)
+coro_resume_value(coro_t *coro, int value)
 {
     assert(coro);
     assert(coro->ended == false);
@@ -283,7 +289,7 @@ coro_resume_value(struct coro *coro, int value)
 }
 
 ALWAYS_INLINE int
-coro_yield(struct coro *coro, int value)
+coro_yield(coro_t *coro, int value)
 {
     assert(coro);
     coro->yield_value = value;
@@ -292,50 +298,53 @@ coro_yield(struct coro *coro, int value)
 }
 
 void
-coro_free(struct coro *coro)
+coro_free(coro_t *coro)
 {
     assert(coro);
 #if !defined(NDEBUG) && defined(USE_VALGRIND)
     VALGRIND_STACK_DEREGISTER(coro->vg_stack_id);
 #endif
     coro_run_deferred(coro);
-    coro_defer_array_reset(&coro->defer);
+    free(coro->defer);
     free(coro);
 }
 
 static void
-coro_defer_any(struct coro *coro, defer_func func, void *data1, void *data2)
+coro_defer_any(coro_t *coro, defer_func func, void *data1, void *data2)
 {
-    struct coro_defer *defer;
+    const coro_defer_t *last = coro->defer + DEFER_MAX;
 
     assert(func);
 
-    defer = coro_defer_array_append(&coro->defer);
-    if (UNLIKELY(!defer)) {
-        lwan_status_error("Could not add new deferred function for coro %p", coro);
-        return;
+    /* Some uses require deferred statements are arranged in a stack. */
+
+    for (coro_defer_t *defer = coro->defer; defer < last; defer++) {
+        if (!defer->func) {
+            defer->func = func;
+            defer->data1 = data1;
+            defer->data2 = data2;
+            return;
+        }
     }
 
-    defer->func = func;
-    defer->data1 = data1;
-    defer->data2 = data2;
+    lwan_status_error("Coroutine %p ran out of deferred callback slots", coro);
 }
 
 ALWAYS_INLINE void
-coro_defer(struct coro *coro, void (*func)(void *data), void *data)
+coro_defer(coro_t *coro, void (*func)(void *data), void *data)
 {
     coro_defer_any(coro, func, data, NULL);
 }
 
 ALWAYS_INLINE void
-coro_defer2(struct coro *coro, void (*func)(void *data1, void *data2),
+coro_defer2(coro_t *coro, void (*func)(void *data1, void *data2),
             void *data1, void *data2)
 {
     coro_defer_any(coro, func, data1, data2);
 }
 
 void *
-coro_malloc_full(struct coro *coro, size_t size, void (*destroy_func)())
+coro_malloc_full(coro_t *coro, size_t size, void (*destroy_func)())
 {
     void *ptr = malloc(size);
 
@@ -346,13 +355,13 @@ coro_malloc_full(struct coro *coro, size_t size, void (*destroy_func)())
 }
 
 inline void *
-coro_malloc(struct coro *coro, size_t size)
+coro_malloc(coro_t *coro, size_t size)
 {
     return coro_malloc_full(coro, size, free);
 }
 
 char *
-coro_strndup(struct coro *coro, const char *str, size_t max_len)
+coro_strndup(coro_t *coro, const char *str, size_t max_len)
 {
     const size_t len = max_len + 1;
     char *dup = coro_malloc(coro, len);
@@ -364,13 +373,13 @@ coro_strndup(struct coro *coro, const char *str, size_t max_len)
 }
 
 char *
-coro_strdup(struct coro *coro, const char *str)
+coro_strdup(coro_t *coro, const char *str)
 {
     return coro_strndup(coro, str, strlen(str));
 }
 
 char *
-coro_printf(struct coro *coro, const char *fmt, ...)
+coro_printf(coro_t *coro, const char *fmt, ...)
 {
     va_list values;
     int len;

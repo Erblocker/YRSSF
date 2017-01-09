@@ -21,7 +21,7 @@
 
 #include "lwan.h"
 
-struct lwan_lua_settings {
+struct lwan_lua_settings_t {
     const char *default_type;
     const char *script_file;
     const char *script;
@@ -30,9 +30,9 @@ struct lwan_lua_settings {
 
 #define LUA(default_type_) \
     .module = lwan_module_lua(), \
-    .args = ((struct lwan_lua[]) {{ \
+    .args = ((struct lwan_lua_t[]) {{ \
         .default_type = default_type_ \
     }}), \
     .flags = 0
 
-const struct lwan_module *lwan_module_lua(void);
+const lwan_module_t *lwan_module_lua(void);

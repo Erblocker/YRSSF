@@ -31,43 +31,46 @@
 
 #include "strbuf.h"
 
-enum config_line_type {
+typedef struct config_t_ config_t;
+typedef struct config_line_t_ config_line_t;
+
+typedef enum {
     CONFIG_LINE_TYPE_LINE,
     CONFIG_LINE_TYPE_SECTION,
     CONFIG_LINE_TYPE_SECTION_END
-};
+} config_line_type_t;
 
-struct config {
+struct config_t_ {
     FILE *file;
     char *path, *error_message;
-    struct strbuf *strbuf;
+    strbuf_t *strbuf;
     struct {
         long end;
     } isolated;
     int line;
 };
 
-struct config_line {
+struct config_line_t_ {
     union {
         struct {
             char *name, *param;
-        };
+        } section;
         struct {
             char *key, *value;
-        };
+        } line;
     };
-    enum config_line_type type;
+    config_line_type_t type;
     char buffer[1024];
 };
 
-bool config_open(struct config *conf, const char *path);
-void config_close(struct config *conf);
-bool config_error(struct config *conf, const char *fmt, ...);
-bool config_read_line(struct config *conf, struct config_line *l);
+bool config_open(config_t *conf, const char *path);
+void config_close(config_t *conf);
+bool config_error(config_t *conf, const char *fmt, ...);
+bool config_read_line(config_t *conf, config_line_t *l);
 
-bool config_isolate_section(struct config *current_conf,
-    struct config_line *current_line, struct config *isolated);
-bool config_skip_section(struct config *conf, struct config_line *line);
+bool config_isolate_section(config_t *current_conf,
+    config_line_t *current_line, config_t *isolated);
+bool config_skip_section(config_t *conf, config_line_t *line);
 
 bool parse_bool(const char *value, bool default_value);
 long parse_long(const char *value, long default_value);

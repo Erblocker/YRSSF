@@ -166,11 +166,10 @@ static struct hash *hash_internal_new(
 				n_buckets * sizeof(struct hash_bucket));
 	if (hash == NULL)
 		return NULL;
-
 	hash->hash_value = hash_value;
 	hash->key_compare = key_compare;
-	hash->free_value = free_value;
-	hash->free_key = free_key;
+	hash->free_value = free_value ? free_value : no_op;
+	hash->free_key = free_key ? free_key : no_op;
 	return hash;
 }
 
@@ -228,7 +227,13 @@ void hash_free(struct hash *hash)
 	free(hash);
 }
 
-static struct hash_entry *hash_add_entry(struct hash *hash, const void *key)
+/*
+ * add or replace key in hash map.
+ *
+ * none of key or value are copied, just references are remembered as is,
+ * make sure they are live while pair exists in hash!
+ */
+int hash_add(struct hash *hash, const void *key, const void *value)
 {
 	unsigned hashval = hash->hash_value(key);
 	unsigned pos = hashval & (n_buckets - 1);
@@ -239,7 +244,7 @@ static struct hash_entry *hash_add_entry(struct hash *hash, const void *key)
 		unsigned new_total = bucket->total + steps;
 		struct hash_entry *tmp = reallocarray(bucket->entries, new_total, sizeof(*tmp));
 		if (tmp == NULL)
-			return NULL;
+			return -errno;
 		bucket->entries = tmp;
 		bucket->total = new_total;
 	}
@@ -249,55 +254,55 @@ static struct hash_entry *hash_add_entry(struct hash *hash, const void *key)
 	for (; entry < entry_end; entry++) {
 		if (hashval != entry->hashval)
 			continue;
-		if (!hash->key_compare(key, entry->key))
-			return entry;
+		if (hash->key_compare(key, entry->key) != 0)
+			continue;
+		hash->free_value((void *)entry->value);
+		hash->free_key((void *)entry->key);
+
+		entry->key = key;
+		entry->value = value;
+		return 0;
 	}
-
-	bucket->used++;
-	hash->count++;
-
-	entry->hashval = hashval;
-	entry->key = entry->value = NULL;
-
-	return entry;
-}
-
-/*
- * add or replace key in hash map.
- *
- * none of key or value are copied, just references are remembered as is,
- * make sure they are live while pair exists in hash!
- */
-int hash_add(struct hash *hash, const void *key, const void *value)
-{
-	struct hash_entry *entry = hash_add_entry(hash, key);
-
-	if (!entry)
-		return -errno;
-
-	hash->free_value((void *)entry->value);
-	hash->free_key((void *)entry->key);
 
 	entry->key = key;
 	entry->value = value;
-
+	entry->hashval = hashval;
+	bucket->used++;
+	hash->count++;
 	return 0;
 }
 
 /* similar to hash_add(), but fails if key already exists */
 int hash_add_unique(struct hash *hash, const void *key, const void *value)
 {
-	struct hash_entry *entry = hash_add_entry(hash, key);
+	unsigned hashval = hash->hash_value(key);
+	unsigned pos = hashval & (n_buckets - 1);
+	struct hash_bucket *bucket = hash->buckets + pos;
+	struct hash_entry *entry, *entry_end;
 
-	if (!entry)
-		return -errno;
+	if (bucket->used + 1 >= bucket->total) {
+		unsigned new_total = bucket->total + steps;
+		struct hash_entry *tmp = reallocarray(bucket->entries, new_total, sizeof(*tmp));
+		if (tmp == NULL)
+			return -errno;
+		bucket->entries = tmp;
+		bucket->total = new_total;
+	}
 
-	if (entry->key || entry->value)
-		return -EEXIST;
+	entry = bucket->entries;
+	entry_end = entry + bucket->used;
+	for (; entry < entry_end; entry++) {
+		if (hashval != entry->hashval)
+			continue;
+		if (hash->key_compare(key, entry->key) == 0)
+			return -EEXIST;
+	}
 
 	entry->key = key;
 	entry->value = value;
-
+	entry->hashval = hashval;
+	bucket->used++;
+	hash->count++;
 	return 0;
 }
 
