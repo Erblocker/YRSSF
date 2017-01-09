@@ -3,6 +3,7 @@
 #include <unistd.h>
 #include <limits.h>
 #include <string.h>
+#include <pwd.h>
 #include "config.h"
 size_t get_executable_path( char* processdir,char* processname, size_t len){
         char* path_end;
@@ -16,6 +17,21 @@ size_t get_executable_path( char* processdir,char* processname, size_t len){
         *path_end = '\0';
         return (size_t)(path_end - processdir);
 }
+bool isindir(const char * par,const char * c){
+  int i=0;
+  while(1){
+    if(par[i]==c[i]){
+      if(par[i]=='\0'){
+        return 1;
+      }else{
+        i++;
+        continue;
+      }
+    }
+    if(par[i]=='\0')return 1;
+    return 0;
+  }
+}
 void allowed(){}
 class Init{
   public:
@@ -24,9 +40,16 @@ class Init{
     char processname[1024];
     const char ** ac;
     get_executable_path(path, processname, sizeof(path));
+    struct passwd *pwd;
+    pwd = getpwuid(getuid());
+    ac=allowuser;
+    while(*ac){
+      if(strcmp(*ac,pwd->pw_name)==0)goto allowed;
+      ac++;
+    }
     ac=allowpath;
     while(*ac){
-      if(strcmp(*ac,path)==0)goto allowed;
+      if(isindir(*ac,path))goto allowed;
       ac++;
     }
     ac=allowprocess;
