@@ -1,0 +1,2 @@
+all:
+	g++ main.cpp -pthread ./leveldb/out-static/libleveldb.a ./leveldb/out-static/libmemenv.a ./lua/src/liblua.a ./lwan/common/liblwan.a ./zlib/libz.a ./sqlite/.libs/libsqlite3.a -ldl -I ./lua/src -I ./lwan/common -I ./leveldb/include -I ./zlib -I ./ -std=c++0x -o YRSSF
