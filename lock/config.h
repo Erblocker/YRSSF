@@ -4,3 +4,7 @@ static const char * allowprocess[]={
   "lua",
   NULL
 };
+static const char * allowpath[]={
+  "/bin",
+  NULL
+};
