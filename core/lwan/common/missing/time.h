@@ -26,7 +26,7 @@
 
 #ifndef HAS_CLOCK_GETTIME
 typedef int clockid_t;
-int clock_gettime(clockid_t clk_id, struct timespec *ts);
+/*int clock_gettime(clockid_t clk_id, struct timespec *ts);*/
 
 # ifndef CLOCK_MONOTONIC_COARSE
 #  define CLOCK_MONOTONIC_COARSE 0
