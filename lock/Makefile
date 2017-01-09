@@ -1,4 +1,4 @@
 all:
 	
-main:
+hook:
 	g++ hook.cpp -fPIC -shared -o hook.so
