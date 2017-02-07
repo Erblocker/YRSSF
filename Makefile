@@ -4,7 +4,7 @@ all:
 	cd core/lwan/build && cmake ../ && make
 	cd core/lua        && make linux
 	cd core/zlib       && make
-	cd core/sqlite     && make
+	cd core/sqlite   && ./configure && make
 clean:
 	cd core/leveldb    && make clean
 	cd core/lwan/build && make clean

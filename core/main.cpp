@@ -1,4 +1,4 @@
-#define SERVER_PORT         8000
+#define SERVER_PORT         1215
 #define CLIENT_PORT         8001
 #define SOURCE_CHUNK_SIZE   4096
 #define _SUCCEED         0x30
@@ -56,6 +56,7 @@ extern "C" {
 #include <string>
 #include <string.h>
 #include <map>
+#include <set>
 #include <stack>
 #include <math.h>
 #include <sys/stat.h>
@@ -72,9 +73,12 @@ void   str2int(char * c,int32_t  * i){
 }
 int randnum(){
   static int st=0;
+  int r;
   st++;
   srand(st);
-  return rand();
+  r=rand();
+  if(!r)r++;
+  return r;
 }
 char * randstr(){
   static char result[17];
@@ -103,9 +107,9 @@ int nowtime_s(){
 int iptoint( const char *ip ){
   return ntohl( inet_addr( ip ) );
 }
-void inttoip( int ip_num, char *ip ){
-//  strcpy( ip, (char*)inet_ntoa( htonl( ip_num ) ) );
-}
+/*void inttoip( int ip_num, char *ip ){
+  strcpy( ip, (char*)inet_ntoa( htonl( ip_num ) ) );
+}*/
 void wristr(const char * in,char * out){
     for(int i=0;i<16;i++){
       if(in[i]=='\0'){
@@ -136,6 +140,7 @@ class location{
 struct netHeader{
   char     crypto;
   int32_t  userid;
+  int32_t  unique;
   char     password[16];
   char     mode;
   char     globalMode;
@@ -164,11 +169,21 @@ class YsDB{
   leveldb::DB *          user;
   leveldb::DB *          userTime;
   leveldb::DB *          userTmp;
-  std::map<int,location> userIP;
+  std::map<int32_t,location> userIP;
   leveldb::DB *          sourceBoardcast;
   leveldb::DB *          sourceUser;
   leveldb::DB *          keys;
-  std::mutex             locker;
+  class userunique{
+    public:
+    std::mutex        locker;
+    std::set<int32_t> uni;
+    userunique(){}
+    userunique(const userunique & i){}
+  };
+  
+  std::map<int32_t,userunique> unique;
+  std::mutex                   uniquelocker;
+  std::mutex                   locker;
 /*
 * format:
 **************************************************************
@@ -209,6 +224,22 @@ class YsDB{
   }
   void getkey(){}
   void setkey(){}
+  bool logunique(int32_t uid,int32_t lid){
+    if(lid==0)return 1;
+    uniquelocker.lock();
+    userunique * u=&unique[uid];
+    uniquelocker.unlock();
+    bool result;
+    u->locker.lock();
+    if(u->uni.find(lid)==u->uni.end()){
+      u->uni.insert(lid);
+      result=1;
+    }else{
+      result=0;
+    }
+    u->locker.unlock();
+    return result;
+  }
   bool login(int32_t userid,const char * pwd,std::string * v){
     char name[9];
     const char * tp;
@@ -838,7 +869,11 @@ class ysConnection:public serverBase{
         return 0;
       }
     }
-    char filename[]="data/source/ttttttttuuuuuuuurrrrrrrr.yss";
+    if(!ysDB.logunique(header->userid,header->unique)){
+      fail(from,port);
+      return 0;
+    }
+    char filename[]="static/srcs/ttttttttuuuuuuuurrrrrrrr.yss";
     const char * filenamer;
     netSource respk;
     netQuery  qypk;
@@ -937,6 +972,7 @@ class ysConnection:public serverBase{
         respk.header.userid=myuserid;
         for(i=0;i<16;i++)
           respk.header.password[i]=mypassword[i];
+        respk.header.unique=randnum();
         respk.size=i;
         respk.header.mode=_SETSRC_APPEND;
         wristr(query->str1,respk.title);
@@ -1339,6 +1375,8 @@ class Client:public Server{
     bzero(&buf ,sizeof(buf ));
     qypk.header.mode=_SETSRC_APPEND;
     qypk.header.userid=myuserid;
+    int r=1;
+    qypk.header.unique=randnum();
     qypk.size=size;
     for(i=0;i<8;i++)
       qypk.title[i]=sname[i];

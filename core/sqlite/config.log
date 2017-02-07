@@ -431,7 +431,7 @@ configure:12937: $? = 0
 configure:12937: result: yes
 configure:12937: checking for fullfsync
 configure:12937: gcc -o conftest -g -O2   conftest.c  >&5
-/tmp/ccWfDDuv.o: In function `main':
+/tmp/cciqcySH.o: In function `main':
 /home/pi/Desktop/project/yrssf/core/sqlite/conftest.c:60: undefined reference to `fullfsync'
 collect2: ld returned 1 exit status
 configure:12937: $? = 1
@@ -719,7 +719,7 @@ configure:13158: checking for readline/readline.h
 configure:13158: result: yes
 configure:13166: checking for library containing tgetent
 configure:13197: gcc -o conftest -g -O2   conftest.c  >&5
-/tmp/cckglgpy.o: In function `main':
+/tmp/cc4Ikrya.o: In function `main':
 /home/pi/Desktop/project/yrssf/core/sqlite/conftest.c:42: undefined reference to `tgetent'
 collect2: ld returned 1 exit status
 configure:13197: $? = 1
@@ -774,7 +774,7 @@ configure:13197: $? = 0
 configure:13214: result: -ltermcap
 configure:13222: checking for library containing readline
 configure:13253: gcc -o conftest -g -O2   conftest.c -ltermcap  >&5
-/tmp/ccag3jne.o: In function `main':
+/tmp/ccsFKpTJ.o: In function `main':
 /home/pi/Desktop/project/yrssf/core/sqlite/conftest.c:42: undefined reference to `readline'
 collect2: ld returned 1 exit status
 configure:13253: $? = 1
@@ -829,7 +829,7 @@ configure:13253: $? = 0
 configure:13270: result: -lreadline
 configure:13308: checking for library containing pthread_create
 configure:13339: gcc -o conftest -g -O2   conftest.c  >&5
-/tmp/cc6beueR.o: In function `main':
+/tmp/cc0kROqn.o: In function `main':
 /home/pi/Desktop/project/yrssf/core/sqlite/conftest.c:43: undefined reference to `pthread_create'
 collect2: ld returned 1 exit status
 configure:13339: $? = 1
@@ -889,7 +889,7 @@ configure:13395: $? = 0
 configure:13412: result: none required
 configure:13435: checking for library containing dlopen
 configure:13466: gcc -o conftest -g -O2   conftest.c -lpthread  >&5
-/tmp/cccP8K3B.o: In function `main':
+/tmp/ccQkUwO0.o: In function `main':
 /home/pi/Desktop/project/yrssf/core/sqlite/conftest.c:43: undefined reference to `dlopen'
 collect2: ld returned 1 exit status
 configure:13466: $? = 1

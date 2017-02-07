@@ -3,3 +3,5 @@
 *.a
 YRSSF
 /core/lwan/build/*
+/core/leveldb/out-shared/*
+/core/leveldb/out-static/*
