@@ -12,7 +12,7 @@ clean:
 	cd core/lua        && make clean
 	cd core/zlib       && make clean
 	cd core/sqlite     && make clean
-	rm core/YRSSF
+	rm build/YRSSF
 YRSSF-linux:
 	cd core && make
 lock:

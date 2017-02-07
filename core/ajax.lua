@@ -1,1 +1,0 @@
-RESULT=GET["id"]
