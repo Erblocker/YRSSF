@@ -1260,7 +1260,7 @@ class Server:public ysConnection{
     isrunning=0;
     wmx.lock();
     wmx.unlock();
-    printf("\033[40;43mYRSSF:\033[0mserver shutdown success\n");
+    lwan_status_debug("\033[40;43mYRSSF:\033[0mserver shutdown success\n");
   }
   static void* accept_req(void * req){
     require * r=(require*)req;
@@ -1534,10 +1534,10 @@ class API{
   public:
   API(){
     db=NULL;
-    printf("\033[40;43mYRSSF:\033[0mdatabase loading...\n");
+    lwan_status_debug("\033[40;43mYRSSF:\033[0mdatabase loading...\n");
     int ret = sqlite3_open("./data/yrssf.db", &db);
     if( ret != SQLITE_OK ) {
-      printf("can not open %s \n", sqlite3_errmsg(db));
+      lwan_status_debug("can not open %s \n", sqlite3_errmsg(db));
       return;
     }
   }
@@ -1707,13 +1707,13 @@ class Init{
   }
   void run(){
     pthread_t newthread;
-    printf("\033[40;43mYRSSF:\033[0m");
-    printf("\033[40;36mYRSSF create thread\033[0m\n");
+    lwan_status_debug("\033[40;43mYRSSF:\033[0m");
+    lwan_status_debug("\033[40;36mYRSSF create thread\033[0m\n");
     if(pthread_create(&newthread,NULL,runServerThread,NULL)!=0)
       perror("pthread_create");
   }
   Init(){
-    printf("\033[40;43mYRSSF:\033[0m\033[40;36mYRSSF init\033[0m\n");
+    lwan_status_debug("\033[40;43mYRSSF:\033[0m\033[40;36mYRSSF init\033[0m\n");
     gblua=luaL_newstate();
     luaL_openlibs(gblua);
     lua_pushinteger(gblua,(int)&server);
@@ -1724,7 +1724,7 @@ class Init{
     api.funcreg(gblua);
   }
   ~Init(){
-    printf("\033[40;43mYRSSF:\033[0m\033[40;36mYRSSF server shutdown\033[0m\n");
+    lwan_status_debug("\033[40;43mYRSSF:\033[0m\033[40;36mYRSSF server shutdown\033[0m\n");
     server.shutdown();
     lua_close(gblua);
   }
@@ -1736,7 +1736,8 @@ extern "C" void runServer(){
     yrssf::init.run();
 }
 extern "C" void shutdownServer(){
-    yrssf::init.~Init();
+    lwan_status_debug("shutdown");
+    //yrssf::init.~Init();
 }
 extern "C" void loadAPI(lua_State * L){
     lua_pushinteger(L,(int)&yrssf::server);
@@ -1824,6 +1825,7 @@ void init_daemon(){
 }
 extern "C" int main(){
     lwan_url_map_t default_map[3];
+    bzero(default_map,sizeof(default_map));
     default_map[0].prefix = "/ajax";
     default_map[0].handler = ajax;
     default_map[1].prefix = "/";
@@ -1831,6 +1833,7 @@ extern "C" int main(){
     default_map[1].flags = (lwan_handler_flags_t)0;
     struct lwan_serve_files_settings_t servefile;
     default_map[1].args = &servefile;
+    bzero(&servefile,sizeof(servefile));
     servefile.root_path                        = "static";
     servefile.index_html                       = "index.html";
     servefile.serve_precompressed_files        = true;
@@ -1842,7 +1845,7 @@ extern "C" int main(){
     lwan_set_url_map(&l, default_map);
     runServer();
     lwan_main_loop(&l);
-    printf("\033[40;43mYRSSF:\033[0m\033[40;37mYRSSF shutdown\033[0m\n");
+    lwan_status_debug("\033[40;43mYRSSF:\033[0m\033[40;37mYRSSF shutdown\033[0m\n");
     
     default_map[0].prefix  = NULL;
     default_map[0].handler = NULL;
@@ -1852,8 +1855,8 @@ extern "C" int main(){
     default_map[1].args    = NULL;
     
     shutdownServer();
-    printf("\033[40;43mYRSSF:\033[0m\033[40;37mweb server shutdown\033[0m\n");
+    lwan_status_debug("\033[40;43mYRSSF:\033[0m\033[40;37mweb server shutdown\033[0m\n");
     lwan_shutdown(&l);
-    printf("\033[40;43mYRSSF:\033[0m\033[40;37mweb shutdown success\033[0m\n");
+    lwan_status_debug("\033[40;43mYRSSF:\033[0m\033[40;37mweb shutdown success\033[0m\n");
     return 0;
 }
