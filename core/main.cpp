@@ -1755,14 +1755,16 @@ extern "C" void dofile(const char * path){
 static lwan_http_status_t ajax(lwan_request_t *request,lwan_response_t *response, void *data){
     int i,l;
     lua_State * L=lua_newthread(yrssf::gblua);
-    static lwan_key_value_t headers[]={
-      {"Content-Type"  , "text/html;charset=utf-8"},
-      {"Cache-Control" , "no-cache"},
-      {}
-    };
+    lwan_key_value_t *headers = (lwan_key_value_t*)coro_malloc(request->conn->coro, sizeof(*headers) * 2);
+    if (UNLIKELY(!headers))
+        return HTTP_INTERNAL_ERROR;
+    headers[0].key   = (char*)"Cache-Control";
+    headers[0].value = (char*)"no-cache";
+    headers[1].key   = NULL;
+    headers[1].value = NULL;
     const char * message;
     const static char Emessage[]="NULL";
-    response->mime_type = "text/html";
+    response->mime_type = "text/html;charset=utf-8";
     response->headers   = headers;
     lua_createtable(L,0,request->query_params.len);
     for(i=0;i<request->query_params.len;i++){
@@ -1819,6 +1821,14 @@ extern "C" int main(){
     runServer();
     lwan_main_loop(&l);
     printf("\033[40;43mYRSSF:\033[0m\033[40;37mYRSSF shutdown\033[0m\n");
+    
+    default_map[0].prefix  = NULL;
+    default_map[0].handler = NULL;
+    default_map[1].prefix  = NULL;
+    default_map[1].module  = NULL;
+    default_map[1].flags   = (lwan_handler_flags_t)0;
+    default_map[1].args    = NULL;
+    
     shutdownServer();
     printf("\033[40;43mYRSSF:\033[0m\033[40;37mweb server shutdown\033[0m\n");
     lwan_shutdown(&l);

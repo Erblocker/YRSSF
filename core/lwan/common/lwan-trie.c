@@ -156,22 +156,29 @@ lwan_trie_entry_count(lwan_trie_t *trie)
 static void
 lwan_trie_node_destroy(lwan_trie_t *trie, lwan_trie_node_t *node)
 {
+    lwan_status_debug("check node");
     if (!node)
         return;
 
     int32_t nodes_destroyed = node->ref_count;
 
+    lwan_status_debug("free leaf");
     for (lwan_trie_leaf_t *leaf = node->leaf; leaf;) {
         lwan_trie_leaf_t *tmp = leaf->next;
 
-        if (trie->free_node)
+        if (trie->free_node){
+            lwan_status_debug("trie->free_node(leaf->data)");
             trie->free_node(leaf->data);
+        }
 
+        lwan_status_debug("free(leaf->key)");
         free(leaf->key);
+        lwan_status_debug("free(leaf)");
         free(leaf);
         leaf = tmp;
     }
 
+    lwan_status_debug("destory node");
     for (int32_t i = 0; nodes_destroyed > 0 && i < 8; i++) {
         if (node->next[i]) {
             lwan_trie_node_destroy(trie, node->next[i]);
@@ -179,13 +186,16 @@ lwan_trie_node_destroy(lwan_trie_t *trie, lwan_trie_node_t *node)
         }
     }
 
+    lwan_status_debug("free root node");
     free(node);
 }
 
 void
 lwan_trie_destroy(lwan_trie_t *trie)
 {
+    lwan_status_debug("check");
     if (!trie || !trie->root)
         return;
+    lwan_status_debug("lwan_trie_node_destroy");
     lwan_trie_node_destroy(trie, trie->root);
 }

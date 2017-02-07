@@ -151,13 +151,19 @@ void cache_destroy(struct cache_t *cache)
                       cache->stats.evicted);
 #endif
 
+    lwan_status_debug("lwan_job_del");
     lwan_job_del(cache_pruner_job, cache);
     cache->flags |= SHUTTING_DOWN;
     cache_pruner_job(cache);
+    lwan_status_debug("pthread_rwlock_destroy(&cache->hash.lock)");
     pthread_rwlock_destroy(&cache->hash.lock);
+    lwan_status_debug("pthread_rwlock_destroy(&cache->queue.lock)");
     pthread_rwlock_destroy(&cache->queue.lock);
+    lwan_status_debug("hash_free");
     hash_free(cache->hash.table);
+    lwan_status_debug("free cache");
     free(cache);
+    lwan_status_debug("success");
 }
 
 static ALWAYS_INLINE void convert_to_temporary(struct cache_entry_t *entry)

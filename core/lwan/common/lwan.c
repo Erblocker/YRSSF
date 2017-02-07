@@ -125,17 +125,26 @@ static void destroy_urlmap(void *data)
 {
     lwan_url_map_t *url_map = data;
 
+    lwan_status_debug("check");
     if (url_map->module) {
         const lwan_module_t *module = url_map->module;
-        if (module->shutdown)
+        lwan_status_debug("check module");
+        if (module->shutdown){
+            lwan_status_debug("shutdown module");
             module->shutdown(url_map->data);
+        }
     } else if (url_map->data && url_map->flags & HANDLER_DATA_IS_HASH_TABLE) {
+        lwan_status_debug("free map");
         hash_free(url_map->data);
     }
 
-    free(url_map->authorization.realm);
-    free(url_map->authorization.password_file);
-    free((char *)url_map->prefix);
+    lwan_status_debug("free(url_map->authorization.realm)");
+    if(url_map->authorization.realm)free(url_map->authorization.realm);
+    lwan_status_debug("free(url_map->authorization.password_file)");
+    if(url_map->authorization.password_file)free(url_map->authorization.password_file);
+    lwan_status_debug("free((char *)url_map->prefix)");
+    if(url_map->prefix)free((char *)url_map->prefix);
+    lwan_status_debug("free(url_map)");
     free(url_map);
 }
 
@@ -587,12 +596,18 @@ lwan_shutdown(lwan_t *l)
     lwan_status_debug("Shutting down URL handlers");
     lwan_trie_destroy(&l->url_map_trie);
 
-    free(l->conns);
+    lwan_status_debug("free(l->conns)");
+    if(l->conns)free(l->conns);
 
+    lwan_status_debug("lwan_response_shutdown(l)");
     lwan_response_shutdown(l);
+    lwan_status_debug("lwan_tables_shutdown()");
     lwan_tables_shutdown();
+    lwan_status_debug("lwan_status_shutdown(l)");
     lwan_status_shutdown(l);
+    lwan_status_debug("lwan_http_authorize_shutdown()");
     lwan_http_authorize_shutdown();
+    lwan_status_debug("lwan_module_shutdown(l)");
     lwan_module_shutdown(l);
 }
 
