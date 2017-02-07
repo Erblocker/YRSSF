@@ -167,6 +167,7 @@ class YsDB{
   std::map<int,location> userIP;
   leveldb::DB *          sourceBoardcast;
   leveldb::DB *          sourceUser;
+  leveldb::DB *          keys;
   std::mutex             locker;
 /*
 * format:
@@ -196,6 +197,7 @@ class YsDB{
     assert(leveldb::DB::Open(options, "data/userTmp", &userTmp).ok());
     assert(leveldb::DB::Open(options, "data/sourceUser", &sourceUser).ok());
     assert(leveldb::DB::Open(options, "data/sourceBoardcast", &sourceBoardcast).ok());
+    assert(leveldb::DB::Open(options, "data/keys", &keys).ok());
   }
   ~YsDB(){
     delete user;
@@ -203,7 +205,10 @@ class YsDB{
     delete userTmp;
     delete sourceBoardcast;
     delete sourceUser;
+    delete keys;
   }
+  void getkey(){}
+  void setkey(){}
   bool login(int32_t userid,const char * pwd,std::string * v){
     char name[9];
     const char * tp;
