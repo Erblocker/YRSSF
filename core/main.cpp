@@ -61,6 +61,8 @@ extern "C" {
 #include <math.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
+#include <sys/param.h>
+#include <sys/prctl.h>
 #include <sqlite3.h>
 namespace yrssf{
 //////////////////////////////////
@@ -1799,6 +1801,26 @@ static lwan_http_status_t ajax(lwan_request_t *request,lwan_response_t *response
       strbuf_set_static(response->buffer,Emessage,l-1);
       return HTTP_OK;
     }
+}
+void init_daemon(){
+  int pid;
+  int i; 
+  if(pid=fork()) 
+    exit(0);
+  else
+    if(pid< 0) 
+      exit(1);
+  setsid();
+  if(pid=fork()) 
+    exit(0);
+  else
+    if(pid< 0) 
+      exit(1);
+  for(i=0;i< NOFILE;++i)
+    close(i); 
+  //chdir("/tmp");
+  umask(0);
+  return; 
 }
 extern "C" int main(){
     lwan_url_map_t default_map[3];
