@@ -1362,6 +1362,7 @@ class Client:public Server{
     iscrypt=0;
     script="client.lua";
   }
+  bool updatekey(){}
   bool connectToUser(int32_t uid,in_addr * oaddr,short * oport){
     netQuery qypk;
     netQuery buf;
@@ -1375,11 +1376,13 @@ class Client:public Server{
     qypk.header.userid=myuserid;
     qypk.header.globalMode=globalmode;
     qypk.num1=uid;
+    if(iscrypt)crypt_encode(&qypk,&key);
     for(i=0;i<10;i++){
       send(parIP,parPort,&qypk,sizeof(qypk));
       dsloop1:
       if(recv_within_time(&from,&port,&buf,sizeof(buf),1,0)){
         if(from.s_addr==parIP.s_addr && port==parPort){
+          crypt_decode(&buf,&key);
           if(buf.header.mode==_P2PCONNECT){
             *oport =buf.num1;
             *oaddr =buf.addr;
@@ -1409,11 +1412,13 @@ class Client:public Server{
       qypk.str1[i]=sname[i];
     qypk.header.userid=myuserid;
     qypk.header.globalMode=globalmode;
+    if(iscrypt)crypt_encode(&qypk,&key);
     for(i=0;i<10;i++){
       send(parIP,parPort,&qypk,sizeof(qypk));
       dsloop1:
       if(recv_within_time(&from,&port,&buf,sizeof(buf),1,0)){
         if(from.s_addr==parIP.s_addr && port==parPort){
+          crypt_decode(&buf,&key);
           if(buf.header.mode==_SUCCEED)
             return 1;
           else
@@ -1439,11 +1444,13 @@ class Client:public Server{
       qypk.str1[i]=sname[i];
     qypk.header.globalMode=globalmode;
     wristr(mypassword,qypk.header.password);
+    if(iscrypt)crypt_encode(&qypk,&key);
     for(i=0;i<10;i++){
       send(parIP,parPort,&qypk,sizeof(qypk));
       dcloop1:
       if(recv_within_time(&from,&port,&buf,sizeof(buf),1,0)){
         if(from.s_addr==parIP.s_addr && port==parPort){
+          crypt_decode(&buf,&key);
           if(buf.header.mode==_SETSRC_APPEND){
             int size;
             size=buf.size>SOURCE_CHUNK_SIZE ? SOURCE_CHUNK_SIZE : buf.size;
@@ -1488,11 +1495,13 @@ class Client:public Server{
     for(i=0;(i<size && i<SOURCE_CHUNK_SIZE);i++){
       qypk.source[i]=buf2[i];
     }
+    if(iscrypt)crypt_encode(&qypk,&key);
     for(i=0;i<10;i++){
       send(parIP,parPort,&qypk,sizeof(qypk));
       ucloop2:
       if(recv_within_time(&from,&port,&buf,sizeof(buf),1,0)){
         if(from.s_addr==parIP.s_addr && port==parPort){
+          crypt_decode(&buf,&key);
           if(buf.header.mode==_SUCCEED){
             return 1;
           }else
@@ -1529,11 +1538,13 @@ class Client:public Server{
     wristr(mypassword,qypk.header.password);
     qypk.header.userid=myuserid;
     qypk.header.globalMode=globalmode;
+    if(iscrypt)crypt_encode(&qypk,&key);
     for(i=0;i<10;i++){
       send(parIP,parPort,&qypk,sizeof(qypk));
       dsloop1:
       if(recv_within_time(&from,&port,&buf,sizeof(buf),1,0)){
         if(from.s_addr==parIP.s_addr && port==parPort){
+          crypt_decode(&buf,&key);
           if(buf.header.mode==_SUCCEED)
             return 1;
           else
@@ -1557,11 +1568,13 @@ class Client:public Server{
     wristr(pwd       ,qypk.str1);
     wristr(lpwd      ,qypk.str2);
     qypk.header.userid=myuserid;
+    if(iscrypt)crypt_encode(&qypk,&key);
     for(i=0;i<10;i++){
       send(parIP,parPort,&qypk,sizeof(qypk));
       dsloop1:
       if(recv_within_time(&from,&port,&buf,sizeof(buf),1,0)){
         if(from.s_addr==parIP.s_addr && port==parPort){
+          crypt_decode(&buf,&key);
           if(buf.header.mode==_SUCCEED)
             return 1;
           else
@@ -1586,11 +1599,13 @@ class Client:public Server{
     qypk.header.userid=myuserid;
     qypk.header.globalMode='t';
     qypk.num1=puserid;
+    if(iscrypt)crypt_encode(&qypk,&key);
     for(i=0;i<10;i++){
       send(parIP,parPort,&qypk,sizeof(qypk));
       dsloop1:
       if(recv_within_time(&from,&port,&buf,sizeof(buf),1,0)){
         if(from.s_addr==parIP.s_addr && port==parPort){
+          crypt_decode(&buf,&key);
           if(buf.header.mode==_SUCCEED)
             return 1;
           else
@@ -1614,11 +1629,13 @@ class Client:public Server{
     wristr(mypassword,qypk.header.password);
     qypk.header.userid=myuserid;
     qypk.header.globalMode='t';
+    if(iscrypt)crypt_encode(&qypk,&key);
     for(i=0;i<10;i++){
       send(parIP,parPort,&qypk,sizeof(qypk));
       dsloop1:
       if(recv_within_time(&from,&port,&buf,sizeof(buf),1,0)){
         if(from.s_addr==parIP.s_addr && port==parPort){
+          crypt_decode(&buf,&key);
           if(buf.header.mode==_SUCCEED)
             return 1;
           else
