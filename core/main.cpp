@@ -1294,6 +1294,39 @@ class Client:public Server{
     globalmode='f';
     script="client.lua";
   }
+  bool connectToUser(int32_t uid,in_addr * oaddr,short * oport){
+    netQuery qypk;
+    netQuery buf;
+    int      i;
+    in_addr  from;
+    short    port;
+    bzero(&qypk,sizeof(qypk));
+    bzero(&buf ,sizeof(buf ));
+    qypk.header.mode=_CONNECTUSER;
+    wristr(mypassword,qypk.header.password);
+    qypk.header.userid=myuserid;
+    qypk.header.globalMode=globalmode;
+    qypk.num1=uid;
+    for(i=0;i<10;i++){
+      send(parIP,parPort,&qypk,sizeof(qypk));
+      dsloop1:
+      if(recv_within_time(&from,&port,&buf,sizeof(buf),1,0)){
+        if(from.s_addr==parIP.s_addr && port==parPort){
+          if(buf.header.mode==_P2PCONNECT){
+            *oport =buf.num1;
+            *oaddr =buf.addr;
+            if(p2pconnect(buf.addr,buf.num1))
+              return 1;
+            else
+              return 0;
+          }else
+            return 0;
+        }
+        else
+          goto dsloop1;
+      }
+    }
+  }
   bool newSrc(const char * sname){
     netQuery qypk;
     netQuery buf;
@@ -1679,6 +1712,15 @@ class API{
     server.connectUser(lua_tointeger(L,1),addr,lua_tointeger(L,3));
     return 0;
   }
+  static int lua_connectToUser(lua_State * L){
+    in_addr addr;
+    short   port;
+    if(!lua_isinteger(L,1))return 0;
+    lua_pushboolean(L,(client.connectToUser(lua_tointeger(L,1),&addr,&port)));
+    lua_pushstring(L,inet_ntoa(addr));
+    lua_pushinteger(L,port);
+    return 3;
+  }
   void funcreg(lua_State * L){
     lua_register(L,"clientUpload",        lua_upload);
     lua_register(L,"clientDownload",      lua_download);
@@ -1687,6 +1729,7 @@ class API{
     lua_register(L,"clientNewUser",       lua_newUser);
     lua_register(L,"changeParentServer",  lua_cps);
     lua_register(L,"connectUser",         lua_connectUser);
+    lua_register(L,"connectToUser",       lua_connectToUser);
     lua_register(L,"runsql",              runsql);
     lua_register(L,"globalModeOn",[](lua_State * L){
       client.globalmode='t';
