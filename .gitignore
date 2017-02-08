@@ -1,6 +1,8 @@
 *.so
 *.o
 *.a
+*.out
+*.hex
 YRSSF
 /core/lwan/build/*
 /core/leveldb/out-shared/*
