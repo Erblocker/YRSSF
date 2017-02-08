@@ -170,6 +170,10 @@ struct netSource{
 };
 struct aesblock{
   uint8_t data[16];
+  aesblock & operator=(aesblock & f){
+    for(int i=0;i<16;i++) data[i]=f.data[i];
+    return *this;
+  }
 };
 template<typename T>
 void crypt_encode(T data,aesblock * key){
@@ -1806,6 +1810,37 @@ class API{
     lua_pushinteger(L,port);
     return 3;
   }
+  static int lua_setkey(lua_State * L){
+    aesblock key;
+    bzero(&key,sizeof(key));
+    const char * str;
+    if(!lua_isstring(L,1))return 0;
+    str=lua_tostring(L,1);
+    for(int i=0;(i<16 && str[i]);i++)
+      key.data[i]=str[i];
+    if(!lua_isinteger(L,2)){
+      client.key=key;
+    }else{
+      ysDB.setkey(lua_tointeger(L,2),&key);
+    }
+    return 0;
+  }
+  static int lua_getkey(lua_State * L){
+    aesblock key;
+    char str[17];
+    str[16]='\0';
+    int i;
+    aesblock *tk;
+    if(!lua_isinteger(L,1)){
+      tk=&(client.key);
+    }else{
+      tk=&key;
+      ysDB.getkey(lua_tointeger(L,1),&key);
+    }
+    for(i=0;i<16;i++) str[i]=tk->data[i];
+    lua_pushstring(L,str);
+    return 1;
+  }
   void funcreg(lua_State * L){
     lua_register(L,"clientUpload",        lua_upload);
     lua_register(L,"clientDownload",      lua_download);
@@ -1815,6 +1850,8 @@ class API{
     lua_register(L,"changeParentServer",  lua_cps);
     lua_register(L,"connectUser",         lua_connectUser);
     lua_register(L,"connectToUser",       lua_connectToUser);
+    lua_register(L,"getkey",              lua_getkey);
+    lua_register(L,"setkey",              lua_setkey);
     lua_register(L,"runsql",              runsql);
     lua_register(L,"globalModeOn",[](lua_State * L){
       client.globalmode='t';
@@ -1850,6 +1887,7 @@ class Init{
     lua_setglobal(gblua,"CLIENT");
     ysConnection::funcreg(gblua);
     api.funcreg(gblua);
+    luaL_dofile(gblua,"init.lua");
   }
   ~Init(){
     lwan_status_debug("\033[40;43mYRSSF:\033[0m\033[40;36mYRSSF server shutdown\033[0m\n");
