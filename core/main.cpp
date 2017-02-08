@@ -22,6 +22,7 @@
 #define _SHELL           0xBB
 #define _GETSERVERINFO   0xAA
 #define _CONNECT         0xAB
+#define _GETKEY          0xAC
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -47,6 +48,7 @@ extern "C" {
 #include "lua/src/luaconf.h"
 #include "lwan.h"
 #include "lwan-serve-files.h"
+#include "aes/aes.h"
 }
 #include <cassert>
 #include <iostream>
@@ -140,7 +142,7 @@ class location{
   }
 };
 struct netHeader{
-  char     crypto;
+  char     crypt;
   int32_t  userid;
   int32_t  unique;
   char     password[16];
@@ -157,13 +159,44 @@ struct netQuery{
   int32_t   num2;
   int32_t   num3;
   int32_t   num4;
+  char      endchunk[16];
 };
 struct netSource{
   netHeader header;
   u_int32_t size;
   char      title[16];
   char      source[SOURCE_CHUNK_SIZE];
+  char      endchunk[16];
 };
+struct aesblock{
+  uint8_t data[16];
+};
+template<typename T>
+void crypt_encode(T data,aesblock * key){
+  if(data->header.crypt=='t')return;
+  aesblock * here =(aesblock*)data->header.unique;
+  aesblock * end  =(aesblock*)data->endchunk;
+  aesblock buf;
+  data->header.crypt='t';
+  while(here<end){
+    AES128_ECB_encrypt(here->data, key->data, buf.data);
+    memcpy(here,&buf,sizeof(aesblock));
+    here++;
+  }
+}
+template<typename T>
+void crypt_decode(T data,aesblock * key){
+  if(data->header.crypt!='t')return;
+  aesblock * here =(aesblock*)data->header.unique;
+  aesblock * end  =(aesblock*)data->endchunk;
+  aesblock buf;
+  data->header.crypt='f';
+  while(here<end){
+    AES128_ECB_decrypt(here->data, key->data, buf.data);
+    memcpy(here,&buf,sizeof(aesblock));
+    here++;
+  }
+}
 const char defaultUserInfo[]="1234567890abcdef1234567890abcdef1234567890abcdef";
 lua_State * gblua;
 class YsDB{
@@ -224,8 +257,23 @@ class YsDB{
     delete sourceUser;
     delete keys;
   }
-  void getkey(){}
-  void setkey(){}
+  bool getkey(int32_t uid,aesblock * key){
+    char name[9];
+    std::string v;
+    int2str(&uid,name);
+    if(!keys->Get(leveldb::ReadOptions(),name,&v).ok())return 0;
+    if(v.length()<16)return 0;
+    for(int i=0;i<16;i++) key->data[i]=v[i];
+    return 1;
+  }
+  void setkey(int32_t uid,aesblock * key){
+    char name[9];
+    int2str(&uid,name);
+    char v[17];
+    for(int i=0;i<16;i++)v[i]=key->data[i];
+    v[16]='\0';
+    keys->Put(leveldb::WriteOptions(),name,v);
+  }
   bool logunique(int32_t uid,int32_t lid){
     if(lid==0)return 1;
     uniquelocker.lock();
@@ -450,15 +498,21 @@ class serverBase{
   ~serverBase(){
     close(server_socket_fd);
   }
-  virtual bool recv(struct sockaddr_in * client_addr,void *buffer,int size){   //接收
+  virtual bool recv_b(struct sockaddr_in * client_addr,void *buffer,int size){   //接收
     socklen_t client_addr_length = sizeof(*client_addr); 
     bzero(buffer,size);
     if(recvfrom(server_socket_fd, buffer,size,0,(struct sockaddr*)client_addr,&client_addr_length) == -1) return 0; 
     return 1;
   }
-  virtual bool send(struct sockaddr_in * to,void *buffer,int size){   //发送
+  virtual bool recv(struct sockaddr_in * client_addr,void *buffer,int size){
+    return recv_b(client_addr,buffer,size);
+  }
+  virtual bool send_b(struct sockaddr_in * to,void *buffer,int size){   //发送
     if(sendto(server_socket_fd, buffer, size,0,(struct sockaddr*)to,sizeof(*to)) < 0)return 0;
     return 1; 
+  }
+  virtual bool send(struct sockaddr_in * to,void *buffer,int size){
+    return send_b(to,buffer,size);
   }
   virtual bool recv(in_addr *from,short * port,void *buffer,int size){
      struct sockaddr_in c;
@@ -822,6 +876,14 @@ class ysConnection:public serverBase{
     netHeader * header = (netHeader*)data;
     netSource * source = (netSource*)data;
     netQuery  * query  =  (netQuery*)data;
+    bool crypt=0;
+    aesblock key;
+    if(header->crypt=='t'){
+      crypt=1;
+      if(ysDB.getkey(header->userid,&key)){
+        crypt_decode(source,&key);
+      }
+    }
     if(from.s_addr==parIP.s_addr)
     if(port==parPort){
       if(header->mode==_LOGIN){
@@ -862,6 +924,7 @@ class ysConnection:public serverBase{
       q.header.userid=myuserid;
       for(i=0;i<16;i++)
         q.header.password[i]=mypassword[i];
+      if(crypt)crypt_encode(&q,&key);
       send(from,port,&q,sizeof(q));
       return 1;
     }
@@ -978,6 +1041,7 @@ class ysConnection:public serverBase{
         respk.size=i;
         respk.header.mode=_SETSRC_APPEND;
         wristr(query->str1,respk.title);
+        if(crypt)crypt_encode(&respk,&key);
         send(from,port,&respk,sizeof(respk));
         return 1;
       break;
@@ -1006,6 +1070,7 @@ class ysConnection:public serverBase{
         respk.header.userid=myuserid;
         for(i=0;i<16;i++)
           respk.header.password[i]=mypassword[i];
+        if(crypt)crypt_encode(&respk,&key);
         send(from,port,&respk,sizeof(respk));
         return 1;
       break;
@@ -1144,8 +1209,8 @@ class ysConnection:public serverBase{
 *get server info
 *do something......
 */
-    netQuery qypk;
-    netQuery buf;
+    netQuery  qypk;
+    netSource buf;
     int      i;
     in_addr  from;
     short    port;
@@ -1289,9 +1354,12 @@ class Server:public ysConnection{
 }server(SERVER_PORT);
 class Client:public Server{
   public:
-  char  globalmode;
+  char     globalmode;
+  bool     iscrypt;
+  aesblock key;
   Client(short p):Server(p){
     globalmode='f';
+    iscrypt=0;
     script="client.lua";
   }
   bool connectToUser(int32_t uid,in_addr * oaddr,short * oport){
