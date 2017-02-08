@@ -49,6 +49,7 @@ extern "C" {
 #include "lwan.h"
 #include "lwan-serve-files.h"
 #include "aes/aes.h"
+#include "zlib.h"
 }
 #include <cassert>
 #include <iostream>
@@ -1859,6 +1860,14 @@ class API{
     });
     lua_register(L,"globalModeOff",[](lua_State * L){
       client.globalmode='f';
+      return 0;
+    });
+    lua_register(L,"cryptModeOn",[](lua_State * L){
+      client.iscrypt=1;
+      return 0;
+    });
+    lua_register(L,"cryptModeOff",[](lua_State * L){
+      client.iscrypt=0;
       return 0;
     });
     lua_register(L,"setServerUser",lua_ssu);
