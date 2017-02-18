@@ -51,7 +51,7 @@ extern "C" {
 #include "aes/aes.h"
 #include "zlib.h"
 }
-#include <ecc.hpp>
+#include "ecc.hpp"
 #include <cassert>
 #include <iostream>
 #include <stdio.h>
@@ -190,7 +190,7 @@ class Key:private ECC{
     Pare po(pare);
     po.x=data[0];
     po.y=data[1];
-    ECC::Message cryptout= encryption(po);
+    ECC::Message cryptout = encryption(po);
     cp=(char*)&cryptout;
     for(i=0;i<sizeof(cryptout);i++){
       this->buf->key[i]=cp[i];
@@ -201,9 +201,9 @@ class Key:private ECC{
     ECC::Pare pp(pare);
     ECC::Message cryptin(pp,pp);
     cryptin.c1.x=data[0];
-    cryptin.c1.x=data[1];
+    cryptin.c1.y=data[1];
     cryptin.c2.x=data[2];
-    cryptin.c2.x=data[3];
+    cryptin.c2.y=data[3];
     ECC::Pare po(pare);
     po=decryption(cryptin);
     int64_t * ot=(int64_t*)key;
