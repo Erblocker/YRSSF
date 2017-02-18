@@ -170,7 +170,7 @@ struct netSource{
   char      source[SOURCE_CHUNK_SIZE];
   char      endchunk[16];
 };
-class Key:private ECC{
+class Key:public ECC{
   public:
   struct write{};
   struct read{};
