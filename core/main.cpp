@@ -78,7 +78,7 @@ void   str2int(char * c,int32_t  * i){
   sscanf(c,  "%8x",  i); 
 }
 int randnum(){
-  static int st=0;
+  static int st=time(NULL);
   int r;
   st++;
   srand(st);

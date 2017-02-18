@@ -111,10 +111,18 @@ class ECC{
   int64_t privatekey;//7位速度变慢 私钥--随机
   Pare publickey;//公钥
   static int64_t random(int64_t max){
-  
+    static int st=time(NULL);
+    int64_t r;
+    st++;
+    srand(st);
+    r+=rand();
+    st++;
+    srand(st);
+    r*=rand();
+    return r % max;
   }
   static int64_t prime(){
-  
+    
   }
   ECC():e(prime(),random(1024),random(1024)),pare(&e),publickey(&e){
     privatekey = random(1024);//7位速度变慢 私钥--随机
