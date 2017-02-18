@@ -1980,6 +1980,10 @@ class API{
     lua_register(L,"getkey",              lua_getkey);
     lua_register(L,"setkey",              lua_setkey);
     lua_register(L,"runsql",              runsql);
+    lua_register(L,"updatekey",[](lua_State * L){
+      lua_pushboolean(L,client.updatekey());
+      return 1;
+    });
     lua_register(L,"globalModeOn",[](lua_State * L){
       client.globalmode='t';
       return 0;
