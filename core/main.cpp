@@ -51,6 +51,7 @@ extern "C" {
 #include "aes/aes.h"
 #include "zlib.h"
 }
+#include <ecc.hpp>
 #include <cassert>
 #include <iostream>
 #include <stdio.h>
@@ -168,6 +169,65 @@ struct netSource{
   char      title[16];
   char      source[SOURCE_CHUNK_SIZE];
   char      endchunk[16];
+};
+class Key:private ECC{
+  public:
+  struct write{};
+  struct read{};
+  struct netSendkey{
+    int64_t p,a,b;
+    int64_t kx,ky,px,py;
+    char key[32];
+  }*buf;
+  char key[16];
+  void setkey(){
+    int64_t data[2];
+    char * cp=(char*)data;
+    int i;
+    for(i=0;i<sizeof(data);i++){
+      cp[i]=key[i];
+    }
+    Pare po(pare);
+    po.x=data[0];
+    po.y=data[1];
+    ECC::Message cryptout= encryption(po);
+    cp=(char*)&cryptout;
+    for(i=0;i<sizeof(cryptout);i++){
+      this->buf->key[i]=cp[i];
+    }
+  }
+  void getkey(){
+    int64_t * data=(int64_t*)this->buf->key;
+    ECC::Pare pp(pare);
+    ECC::Message cryptin(pp,pp);
+    cryptin.c1.x=data[0];
+    cryptin.c1.x=data[1];
+    cryptin.c2.x=data[2];
+    cryptin.c2.x=data[3];
+    ECC::Pare po(pare);
+    po=decryption(cryptin);
+    int64_t * ot=(int64_t*)key;
+    ot[0]=po.x;
+    ot[1]=po.y;
+  }
+  Key(netSendkey * sk,int64_t pvk):ECC(ECC::E(sk->p,sk->a,sk->b),sk->kx,sk->ky,sk->px,sk->py){
+    //read mode
+    buf=sk;
+    privatekey=pvk;
+    getkey();
+  }
+  Key(netSendkey * sk):ECC(){
+    //send mode
+    buf=sk;
+    buf->p=e.p;
+    buf->a=e.a;
+    buf->b=e.b;
+    buf->px=pare.x;
+    buf->py=pare.y;
+    buf->kx=publickey.x;
+    buf->ky=publickey.y;
+    setkey();
+  }
 };
 struct aesblock{
   uint8_t data[16];
