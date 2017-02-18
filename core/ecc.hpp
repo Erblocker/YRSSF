@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include <climits>
+#include "primes.h"
 #define INT64_MAX  9223372036854775807
 #define INT64_MIN -9223372036854775808
 class ECC{
@@ -122,7 +123,12 @@ class ECC{
     return r % max;
   }
   static int64_t prime(){
-    
+    static int st=time(NULL);
+    int r;
+    st++;
+    srand(st);
+    r=abs(rand());
+    return primes[r%(sizeof(primes)/sizeof(int))];
   }
   ECC():e(prime(),random(1024),random(1024)),pare(&e),publickey(&e){
     privatekey = random(1024);//7位速度变慢 私钥--随机

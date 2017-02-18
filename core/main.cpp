@@ -22,7 +22,7 @@
 #define _SHELL           0xBB
 #define _GETSERVERINFO   0xAA
 #define _CONNECT         0xAB
-#define _GETKEY          0xAC
+#define _UPDATEKEY       0xAC
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -181,10 +181,21 @@ class Key:public ECC{
   }*buf;
   char key[16];
   void setkey(){
+    buf->p=e.p;
+    buf->a=e.a;
+    buf->b=e.b;
+    buf->px=pare.x;
+    buf->py=pare.y;
+    buf->kx=publickey.x;
+    buf->ky=publickey.y;
+    char * rk=randstr();
+    int i;
+    for(i=0;i<16;i++){
+      key[i]=rk[i];
+    }
     int64_t data[2];
     char * cp=(char*)data;
-    int i;
-    for(i=0;i<sizeof(data);i++){
+    for(i=0;i<16;i++){
       cp[i]=key[i];
     }
     Pare po(pare);
@@ -210,6 +221,11 @@ class Key:public ECC{
     ot[0]=po.x;
     ot[1]=po.y;
   }
+  Key(){}
+  Key(netSendkey * sk,read):ECC(ECC::E(sk->p,sk->a,sk->b),sk->kx,sk->ky,sk->px,sk->py){
+    //read mode
+    buf=sk;
+  }
   Key(netSendkey * sk,int64_t pvk):ECC(ECC::E(sk->p,sk->a,sk->b),sk->kx,sk->ky,sk->px,sk->py){
     //read mode
     buf=sk;
@@ -226,7 +242,6 @@ class Key:public ECC{
     buf->py=pare.y;
     buf->kx=publickey.x;
     buf->ky=publickey.y;
-    setkey();
   }
 };
 struct aesblock{
@@ -1017,7 +1032,26 @@ class ysConnection:public serverBase{
     FILE * ff;
     //begin : 12
     //end   : 35
+    Key senddata;
+    aesblock newkey;
     switch(header->mode){
+      case _UPDATEKEY:
+        senddata=Key((Key::netSendkey*)&source->source,Key::read());
+        senddata.buf=(Key::netSendkey*)&respk.source;
+        senddata.setkey();
+        for(i=0;i<16;i++) newkey.data[i]=senddata.key[i];
+        ysDB.setkey(header->userid,&newkey);
+        respk.header.userid=myuserid;
+        for(i=0;i<16;i++)
+          respk.header.password[i]=mypassword[i];
+        respk.header.unique=randnum();
+        respk.size=sizeof(Key::netSendkey);
+        respk.header.mode=_UPDATEKEY;
+        
+        if(crypt)crypt_encode(&respk,&key);
+        send(from,port,&respk,sizeof(respk));
+        return 1;
+      break;
       case _NEWSRC:
         //get file name
           time==nowtime();
@@ -1427,7 +1461,39 @@ class Client:public Server{
     iscrypt=0;
     script="client.lua";
   }
-  bool updatekey(){}
+  bool updatekey(){
+    netSource qypk;
+    netSource buf;
+    int i;
+    in_addr  from;
+    short    port;
+    bzero(&qypk,sizeof(qypk));
+    bzero(&buf ,sizeof(buf ));
+    Key senddata((Key::netSendkey*)&(qypk.source));
+    qypk.header.mode=_UPDATEKEY;
+    qypk.header.userid=myuserid;
+    qypk.header.unique=randnum();
+    qypk.size=sizeof(Key::netSendkey);
+    wristr(mypassword,qypk.header.password);
+    if(iscrypt)crypt_encode(&qypk,&key);
+    for(i=0;i<10;i++){
+      send(parIP,parPort,&qypk,sizeof(qypk));
+      uploop2:
+      if(recv_within_time(&from,&port,&buf,sizeof(buf),1,0)){
+        if(from.s_addr==parIP.s_addr && port==parPort){
+          crypt_decode(&buf,&key);
+          Key ded((Key::netSendkey*)&(buf.source),senddata.privatekey);
+          for(i=0;i<16;i++){
+            this->key.data[i]=ded.key[i];
+          }
+          return 1;
+        }
+        else
+          goto uploop2;
+      }
+    }
+    return 0;
+  }
   bool connectToUser(int32_t uid,in_addr * oaddr,short * oport){
     netQuery qypk;
     netQuery buf;
