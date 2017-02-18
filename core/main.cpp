@@ -254,7 +254,7 @@ struct aesblock{
 template<typename T>
 void crypt_encode(T data,aesblock * key){
   if(data->header.crypt=='t')return;
-  aesblock * here =(aesblock*)data->header.unique;
+  aesblock * here =(aesblock*)&data->header.unique;
   aesblock * end  =(aesblock*)data->endchunk;
   aesblock buf;
   data->header.crypt='t';
@@ -267,7 +267,7 @@ void crypt_encode(T data,aesblock * key){
 template<typename T>
 void crypt_decode(T data,aesblock * key){
   if(data->header.crypt!='t')return;
-  aesblock * here =(aesblock*)data->header.unique;
+  aesblock * here =(aesblock*)&data->header.unique;
   aesblock * end  =(aesblock*)data->endchunk;
   aesblock buf;
   data->header.crypt='f';
