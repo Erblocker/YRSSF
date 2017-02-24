@@ -1,6 +1,6 @@
 all:
 	cd core/leveldb    && make
-	mkdir core/lwan/build
+	-mkdir core/lwan/build
 	cd core/lwan/build && cmake ../ && make
 	cd core/lua        && make linux
 	cd core/zlib       && make

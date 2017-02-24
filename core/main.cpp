@@ -62,14 +62,45 @@ extern "C" {
 #include <map>
 #include <set>
 #include <stack>
+#include <list>
 #include <math.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
 #include <sys/param.h>
 #include <sys/prctl.h>
+#include <dlfcn.h>
 #include <sqlite3.h>
 namespace yrssf{
 //////////////////////////////////
+const char defaultUserInfo[]="1234567890abcdef1234567890abcdef1234567890abcdef";
+lua_State * gblua;
+class Libs{
+  std::list<void*> liblist;
+  public:
+  Libs(){}
+  ~Libs(){
+    std::list<void*>::iterator i;
+    for(i=liblist.begin(); i!=liblist.end();i++)
+      dlclose(*i);
+  }
+  void open(const char * path){
+    void * handler=dlopen(path,RTLD_LAZY);
+    if(handler==NULL){
+      printf("fail to open %s \n" ,path);
+      return;
+    }
+    
+    liblist.push_back(handler);
+    
+    auto func=(void(*)(lua_State *))dlsym(handler,"lua_open");
+    const char * err=dlerror();
+    
+    if(err)printf("Error:%s\n",err);
+    
+    if(func)func(gblua);
+    
+  }
+}libs;
 void   int2str(int32_t  * i,char * c){
   sprintf(c, "%8x ", *i);
   c[8]='\0';
@@ -125,6 +156,70 @@ void wristr(const char * in,char * out){
       out[i]=in[i];
     }
 }
+class nint32{
+  public:
+  int32_t value;
+  nint32(){
+    value=0;
+  }
+  nint32(int32_t v){
+    value=htonl(v);
+  }
+  nint32 & operator=(int32_t v){
+    value=htonl(v);
+    return *this;
+  }
+  nint32(const nint32 & v){
+    value=v.value;
+  }
+  nint32 & operator=(const nint32 & v){
+    value=v.value;
+    return *this;
+  }
+  int32_t val(){
+    return ntohl(value);
+  }
+  int32_t operator()(){
+    return val();
+  }
+};
+class nint64{
+  private:
+  uint32_t a,b;
+  public:
+  uint64_t get(){
+    return ntohl(a) * 0x100000000 + ntohl(b);
+  }
+  void set(uint64_t value){
+    uint32_t s,z;
+    s=value     / 0x100000000;
+    z=value - s * 0x100000000;
+    a=htonl(s);
+    b=htonl(z);
+  }
+  nint64(){
+    set(0);
+  }
+  nint64(const nint64 & v){
+    a=v.a;
+    b=v.b;
+  }
+  nint64 & operator=(const nint64 & v){
+    a=v.a;
+    b=v.b;
+    return *this;
+  }
+  nint64(int64_t v){
+    set(v);
+  }
+  nint64 & operator=(int64_t v){
+    set(v);
+    return *this;
+  }
+  int64_t operator()(){
+    return get();
+  }
+};
 class location{
   public:
   in_addr ip;
@@ -145,7 +240,7 @@ class location{
 };
 struct netHeader{
   char     crypt;
-  int32_t  userid;
+  nint32   userid;
   int32_t  unique;
   char     password[16];
   char     mode;
@@ -157,15 +252,15 @@ struct netQuery{
   char      str1[16];
   char      str2[16];
   in_addr   addr;
-  int32_t   num1;
-  int32_t   num2;
-  int32_t   num3;
-  int32_t   num4;
+  nint32    num1;
+  nint32    num2;
+  nint32    num3;
+  nint32    num4;
   char      endchunk[16];
 };
 struct netSource{
   netHeader header;
-  u_int32_t size;
+  nint32    size;
   char      title[16];
   char      source[SOURCE_CHUNK_SIZE];
   char      endchunk[16];
@@ -175,8 +270,8 @@ class Key:public ECC{
   struct write{};
   struct read{};
   struct netSendkey{
-    int64_t p,a,b;
-    int64_t kx,ky,px,py;
+    nint64 p,a,b;
+    nint64 kx,ky,px,py;
     char key[32];
   }*buf;
   char key[16];
@@ -222,11 +317,11 @@ class Key:public ECC{
     ot[1]=po.y;
   }
   Key(){}
-  Key(netSendkey * sk,read):ECC(ECC::E(sk->p,sk->a,sk->b),sk->kx,sk->ky,sk->px,sk->py){
+  Key(netSendkey * sk,read):ECC(ECC::E(sk->p(),sk->a(),sk->b()),sk->kx(),sk->ky(),sk->px(),sk->py()){
     //read mode
     buf=sk;
   }
-  Key(netSendkey * sk,int64_t pvk):ECC(ECC::E(sk->p,sk->a,sk->b),sk->kx,sk->ky,sk->px,sk->py){
+  Key(netSendkey * sk,int64_t pvk):ECC(ECC::E(sk->p(),sk->a(),sk->b()),sk->kx(),sk->ky(),sk->px(),sk->py()){
     //read mode
     buf=sk;
     privatekey=pvk;
@@ -254,8 +349,8 @@ struct aesblock{
 template<typename T>
 void crypt_encode(T data,aesblock * key){
   if(data->header.crypt=='t')return;
-  aesblock * here =(aesblock*)&data->header.unique;
-  aesblock * end  =(aesblock*)data->endchunk;
+  aesblock * here =(aesblock*)&(data->header.unique);
+  aesblock * end  =(aesblock*)&(data->endchunk[0]);
   aesblock buf;
   data->header.crypt='t';
   while(here<end){
@@ -267,8 +362,8 @@ void crypt_encode(T data,aesblock * key){
 template<typename T>
 void crypt_decode(T data,aesblock * key){
   if(data->header.crypt!='t')return;
-  aesblock * here =(aesblock*)&data->header.unique;
-  aesblock * end  =(aesblock*)data->endchunk;
+  aesblock * here =(aesblock*)&(data->header.unique);
+  aesblock * end  =(aesblock*)&(data->endchunk[0]);
   aesblock buf;
   data->header.crypt='f';
   while(here<end){
@@ -277,8 +372,6 @@ void crypt_decode(T data,aesblock * key){
     here++;
   }
 }
-const char defaultUserInfo[]="1234567890abcdef1234567890abcdef1234567890abcdef";
-lua_State * gblua;
 class YsDB{
   public:
   leveldb::DB *          user;
@@ -662,6 +755,9 @@ class ysConnection:public serverBase{
   short                parPort;
   std::stack<location> ipstack;
   std::mutex           iplocker;
+  char                 globalmode;
+  bool                 iscrypt;
+  aesblock             key;
   ysConnection(short p):serverBase(p){
     mypassword[16]='\0';
     script="default.lua";
@@ -678,7 +774,7 @@ class ysConnection:public serverBase{
   virtual bool checkInParent(int32_t,const char*){
     return 0;
   }
-  virtual bool succeed(in_addr to,short port){
+  virtual bool succeed(in_addr to,short port,int32_t uq){
     netQuery data;
     bzero(&data, sizeof(data));
     data.header.userid=myuserid;
@@ -687,7 +783,7 @@ class ysConnection:public serverBase{
     data.header.mode=_SUCCEED;
     return send(to,port,&data,sizeof(data));
   }
-  virtual bool fail(in_addr to,short port){
+  virtual bool fail(in_addr to,short port,int32_t uq){
     netQuery data;
     bzero(&data, sizeof(data));
     data.header.userid=myuserid;
@@ -780,7 +876,7 @@ class ysConnection:public serverBase{
       short port=lua_tointeger(L,2);
       if(!lua_isinteger(L,3))return 0;
       auto self=(ysConnection*)lua_tointeger(L,3);
-      self->succeed(ip,port);
+      self->succeed(ip,port,0);
       return 0;
     });
     lua_register(lua,"fail",[](lua_State * L){
@@ -791,7 +887,7 @@ class ysConnection:public serverBase{
       short port=lua_tointeger(L,2);
       if(!lua_isinteger(L,3))return 0;
       auto self=(ysConnection*)lua_tointeger(L,3);
-      self->fail(ip,port);
+      self->fail(ip,port,0);
       return 0;
     });
     lua_register(lua,"connect",[](lua_State * L){
@@ -847,7 +943,7 @@ class ysConnection:public serverBase{
         lua_pushstring (L,inet_ntoa(from));
         lua_pushinteger(L,port);
         //push userid
-        lua_pushinteger(L,buf.header.userid);
+        lua_pushinteger(L,buf.header.userid());
         //push password
         wristr(buf.header.password,bufs);
         lua_pushstring(L,bufs);
@@ -856,10 +952,10 @@ class ysConnection:public serverBase{
         lua_pushstring(L,bufs);
         wristr(buf.str2, bufs);
         lua_pushstring(L,bufs);
-        lua_pushinteger(L,buf.num1);
-        lua_pushinteger(L,buf.num2);
-        lua_pushinteger(L,buf.num3);
-        lua_pushinteger(L,buf.num4);
+        lua_pushinteger(L,buf.num1());
+        lua_pushinteger(L,buf.num2());
+        lua_pushinteger(L,buf.num3());
+        lua_pushinteger(L,buf.num4());
         return 10;
       }else{
         lua_pushboolean(L,0);
@@ -922,7 +1018,7 @@ class ysConnection:public serverBase{
       return 1;
     });
   }
-  virtual bool plus(in_addr from,short fport,void * data,std::string * u){
+  virtual bool plus(in_addr from,short fport,void * data,std::string * u,netQuery * result){
     lua_State * lua;
     int port=(int)fport;
     auto query=(netQuery*)data;
@@ -935,7 +1031,7 @@ class ysConnection:public serverBase{
     lua_setglobal(lua,"FROM_PORT");
     lua_pushinteger(lua,(int)this);
     lua_setglobal(lua,"RUNNINGSERVER");
-    lua_pushinteger(lua,query->header.userid);
+    lua_pushinteger(lua,query->header.userid());
     lua_setglobal(lua,"USERID");
     wristr(query->header.function,buffer);
     lua_pushstring(lua,buffer);
@@ -943,8 +1039,43 @@ class ysConnection:public serverBase{
     lua_pushstring(lua,u->c_str());
     lua_setglobal(lua,"USERINFO");
     funcreg(lua);
+    
     luaL_dofile(lua,script);
-    lua_close(lua);
+    
+    lua_getglobal(lua,"NUM1");
+    if(lua_isinteger(lua,-1)) result->num1=lua_tointeger(lua,-1);
+    lua_pop(lua,1);
+    
+    lua_getglobal(lua,"NUM2");
+    if(lua_isinteger(lua,-1)) result->num2=lua_tointeger(lua,-1);
+    lua_pop(lua,1);
+    
+    lua_getglobal(lua,"NUM3");
+    if(lua_isinteger(lua,-1)) result->num3=lua_tointeger(lua,-1);
+    lua_pop(lua,1);
+    
+    lua_getglobal(lua,"NUM4");
+    if(lua_isinteger(lua,-1)) result->num4=lua_tointeger(lua,-1);
+    lua_pop(lua,1);
+    
+    int i;
+    const char * ostr;
+    
+    lua_getglobal(lua,"str1");
+    if(lua_isstring(lua,-1)){
+      ostr=lua_tostring(lua,-1);
+      for(i=0;(i<16 && ostr[i]!='\0');i++)
+        result->str1[i]=ostr[i];
+    }
+    lua_pop(lua,1);
+    
+    lua_getglobal(lua,"str2");
+    if(lua_isstring(lua,-1)){
+      ostr=lua_tostring(lua,-1);
+      for(i=0;(i<16 && ostr[i]!='\0');i++)
+        result->str2[i]=ostr[i];
+    }
+    lua_pop(lua,1);
   }
   virtual bool run(in_addr from,short port,void * data){
     std::string userinfo;
@@ -960,28 +1091,28 @@ class ysConnection:public serverBase{
     aesblock key;
     if(header->crypt=='t'){
       crypt=1;
-      if(ysDB.getkey(header->userid,&key)){
+      if(ysDB.getkey(header->userid(),&key)){
         crypt_decode(source,&key);
       }
     }
     if(from.s_addr==parIP.s_addr)
     if(port==parPort){
       if(header->mode==_LOGIN){
-        ysDB.newUser(header->userid);
-        ysDB.changePwd(header->userid,header->password);
-        ysDB.changeAcl(header->userid,"ttftffffffffffff");
+        ysDB.newUser(header->userid());
+        ysDB.changePwd(header->userid(),header->password);
+        ysDB.changeAcl(header->userid(),"ttftffffffffffff");
         return 1;
       }else
       if(header->mode==_P2PCONNECT){
         iplocker.lock();
         if(from.s_addr==parIP.s_addr)
         if(port==parPort)
-        if(p2pconnect(query->addr,query->num1)){
+        if(p2pconnect(query->addr,query->num1())){
           location lc;
           lc.ip  =parIP;
           lc.port=parPort;
           parIP  =query->addr;
-          parPort=query->num1;
+          parPort=query->num1();
           ipstack.push(lc);
           iplocker.unlock();
           return 1;
@@ -991,7 +1122,7 @@ class ysConnection:public serverBase{
         }
       }else
       if(header->mode==_P2PCONNECT_C){
-        p2pconnect(query->addr,query->num1);
+        p2pconnect(query->addr,query->num1());
       }else
       if(header->mode==_GOLAST){
         goLast();
@@ -1004,18 +1135,19 @@ class ysConnection:public serverBase{
       q.header.userid=myuserid;
       for(i=0;i<16;i++)
         q.header.password[i]=mypassword[i];
+      q.header.unique=header->unique;
       if(crypt)crypt_encode(&q,&key);
       send(from,port,&q,sizeof(q));
       return 1;
     }
-    if(!ysDB.login(header->userid,header->password,&userinfo)){
-      if(!checkInParent(header->userid,header->password)){
-        fail(from,port);
+    if(!ysDB.login(header->userid(),header->password,&userinfo)){
+      if(!checkInParent(header->userid(),header->password)){
+        fail(from,port,header->unique);
         return 0;
       }
     }
-    if(!ysDB.logunique(header->userid,header->unique)){
-      fail(from,port);
+    if(!ysDB.logunique(header->userid(),header->unique)){
+      fail(from,port,header->unique);
       return 0;
     }
     char filename[]="static/srcs/ttttttttuuuuuuuurrrrrrrr.yss";
@@ -1027,7 +1159,8 @@ class ysConnection:public serverBase{
     char   number[9];
     const char * tp;
     std::string result;
-    int2str(&(header->userid),name);
+    int32_t rvuserid=header->userid();
+    int2str(&(rvuserid),name);
     int2str(&num,number);
     FILE * ff;
     //begin : 12
@@ -1040,13 +1173,15 @@ class ysConnection:public serverBase{
         senddata.buf=(Key::netSendkey*)&respk.source;
         senddata.setkey();
         for(i=0;i<16;i++) newkey.data[i]=senddata.key[i];
-        ysDB.setkey(header->userid,&newkey);
+        ysDB.setkey(header->userid(),&newkey);
         respk.header.userid=myuserid;
         for(i=0;i<16;i++)
           respk.header.password[i]=mypassword[i];
-        respk.header.unique=randnum();
         respk.size=sizeof(Key::netSendkey);
+        
         respk.header.mode=_UPDATEKEY;
+        
+        respk.header.unique=header->unique;
         
         if(crypt)crypt_encode(&respk,&key);
         send(from,port,&respk,sizeof(respk));
@@ -1070,57 +1205,57 @@ class ysConnection:public serverBase{
           if(userinfo.at(16)=='t'){
             if(!ysDB.existSrc(query->str1))
             if(ysDB.writeSrc(query->str1,filename)){
-              succeed(from,port);
+              succeed(from,port,header->unique);
               createfile(filename);
               return 1;
             }
           }
         }else{
-          if(!ysDB.existSrc(query->str1,header->userid))
-          if(ysDB.writeSrc(query->str1,header->userid,filename)){
-            succeed(from,port);
+          if(!ysDB.existSrc(query->str1,header->userid()))
+          if(ysDB.writeSrc(query->str1,header->userid(),filename)){
+            succeed(from,port,header->unique);
             createfile(filename);
             return 1;
           }
         }
-        fail(from,port);
+        fail(from,port,header->unique);
         return 0;
       break;
       case _SETSRC_APPEND:
         //get file name
-        if((source->size)>SOURCE_CHUNK_SIZE || (source->size)<0){
-          fail(from,port);
+        if((source->size())>SOURCE_CHUNK_SIZE || (source->size())<0){
+          fail(from,port,header->unique);
           return 0;
         }
         if(header->globalMode=='t'){
           if(userinfo.at(16)=='t'){
             if(!ysDB.readSrc(source->title,&result)){
-              fail(from,port);
+              fail(from,port,header->unique);
               return 0;
             }
           }
         }else{
-          if(!ysDB.readSrc(source->title,header->userid,&result)){
-            fail(from,port);
+          if(!ysDB.readSrc(source->title,header->userid(),&result)){
+            fail(from,port,header->unique);
             return 0;
           }
         }
         filenamer=result.c_str();
-        fileappend(filename,source->source,source->size);
+        fileappend(filename,source->source,source->size());
         //get file name end
-        succeed(from,port);
+        succeed(from,port,header->unique);
         return 1;
       break;
       case _GETSRC:
         //get file name
         if(header->globalMode=='t'){
             if(!ysDB.readSrc(query->str1,&result)){
-              fail(from,port);
+              fail(from,port,header->unique);
               return 0;
             }
         }else{
-          if(!ysDB.readSrc(query->str1,header->userid,&result)){
-            fail(from,port);
+          if(!ysDB.readSrc(query->str1,header->userid(),&result)){
+            fail(from,port,header->unique);
             return 0;
           }
         }
@@ -1128,7 +1263,7 @@ class ysConnection:public serverBase{
         //get file name end
         bzero(&respk,sizeof(respk));
         ff=fopen(filenamer,"r");
-        fseek(ff,SOURCE_CHUNK_SIZE*query->num1,SEEK_SET);
+        fseek(ff,SOURCE_CHUNK_SIZE*query->num1(),SEEK_SET);
         for(i=0;(i<SOURCE_CHUNK_SIZE && !feof(ff));i++){
           respk.source[i]=fgetc(ff);
         }
@@ -1136,7 +1271,9 @@ class ysConnection:public serverBase{
         respk.header.userid=myuserid;
         for(i=0;i<16;i++)
           respk.header.password[i]=mypassword[i];
-        respk.header.unique=randnum();
+        
+        respk.header.unique=header->unique;
+        
         respk.size=i;
         respk.header.mode=_SETSRC_APPEND;
         wristr(query->str1,respk.title);
@@ -1148,12 +1285,12 @@ class ysConnection:public serverBase{
         //get file name
         if(header->globalMode=='t'){
             if(!ysDB.readSrc(query->str1,&result)){
-              fail(from,port);
+              fail(from,port,header->unique);
               return 0;
             }
         }else{
-          if(!ysDB.readSrc(query->str1,header->userid,&result)){
-            fail(from,port);
+          if(!ysDB.readSrc(query->str1,header->userid(),&result)){
+            fail(from,port,header->unique);
             return 0;
           }
         }
@@ -1169,6 +1306,9 @@ class ysConnection:public serverBase{
         respk.header.userid=myuserid;
         for(i=0;i<16;i++)
           respk.header.password[i]=mypassword[i];
+        
+        respk.header.unique=header->unique;
+        
         if(crypt)crypt_encode(&respk,&key);
         send(from,port,&respk,sizeof(respk));
         return 1;
@@ -1179,120 +1319,128 @@ class ysConnection:public serverBase{
             if(ysDB.readSrc(query->str1,&result)){
                       ysDB.delSrc(query->str1);
             }else{
-              fail(from,port);
+              fail(from,port,header->unique);
               return 0;
             }
           }
         }else{
-          if(ysDB.readSrc(query->str1,header->userid,&result)){
-                    ysDB.delSrc(query->str1,header->userid);
+          if(ysDB.readSrc(query->str1,header->userid(),&result)){
+                    ysDB.delSrc(query->str1,header->userid());
           }else{
-            fail(from,port);
+            fail(from,port,header->unique);
             return 0;
           }
         }
         if(remove(result.c_str())==-1){
-          fail(from,port);
+          fail(from,port,header->unique);
           return 0;
         }
-        succeed(from,port);
+        succeed(from,port,header->unique);
         return 1;
       break;
       case _NEWUSER:
         if(userinfo.at(17)!='t'){
-          fail(from,port);
+          fail(from,port,header->unique);
           return 0;
         }
-        ysDB.newUser(query->num1);
-        succeed(from,port);
+        ysDB.newUser(query->num1());
+        succeed(from,port,header->unique);
         return 1;
       break;
       case _DELUSER:
         if(userinfo.at(17)!='t'){
-          fail(from,port);
+          fail(from,port,header->unique);
           return 0;
         }
-        ysDB.delUser(query->num1);
-        succeed(from,port);
+        ysDB.delUser(query->num1());
+        succeed(from,port,header->unique);
         return 1;
       break;
       case _SETACL:
         if(userinfo.at(17)!='t'){
-          fail(from,port);
+          fail(from,port,header->unique);
           return 0;
         }
-        if(ysDB.changeAcl(query->num1,query->str1)){
-          succeed(from,port);
+        if(ysDB.changeAcl(query->num1(),query->str1)){
+          succeed(from,port,header->unique);
           return 1;
         }else{
-          fail(from,port);
+          fail(from,port,header->unique);
           return 0;
         }
       break;
       case _SETPWD:
         if(header->globalMode=='t'){
           if(userinfo.at(17)!='t'){
-            fail(from,port);
+            fail(from,port,header->unique);
             return 0;
           }
-          if(ysDB.changePwd(query->num1,query->str1)){
-            succeed(from,port);
+          if(ysDB.changePwd(query->num1(),query->str1)){
+            succeed(from,port,header->unique);
             return 1;
           }else{
-            fail(from,port);
+            fail(from,port,header->unique);
             return 0;
           }
         }else{
-          if(!ysDB.user->Get(leveldb::ReadOptions(),name,&result).ok()){fail(from,port);return 0;}
-          if(result.empty()){fail(from,port);return 0;}
+          if(!ysDB.user->Get(leveldb::ReadOptions(),name,&result).ok()){fail(from,port,header->unique);return 0;}
+          if(result.empty()){fail(from,port,header->unique);return 0;}
           tp=result.c_str();
           for(int i=0;i<16;i++){
-            if(query->str2[i]=='\0') {fail(from,port);return 0;}
-            if(         tp[i]=='\0') {fail(from,port);return 0;}
-            if(query->str2[i]!=tp[i]){fail(from,port);return 0;}
+            if(query->str2[i]=='\0') {fail(from,port,header->unique);return 0;}
+            if(         tp[i]=='\0') {fail(from,port,header->unique);return 0;}
+            if(query->str2[i]!=tp[i]){fail(from,port,header->unique);return 0;}
           }
-          if(ysDB.changePwd(header->userid,query->str1)){
-            succeed(from,port);
+          if(ysDB.changePwd(header->userid(),query->str1)){
+            succeed(from,port,header->unique);
             return 1;
           }else{
-            fail(from,port);
+            fail(from,port,header->unique);
             return 0;
           }
         }
       break;
       case _LOGIN:
-        if(ysDB.setTmpPwd(header->userid,query->str1)){
-          succeed(from,port);
+        if(ysDB.setTmpPwd(header->userid(),query->str1)){
+          succeed(from,port,header->unique);
           return 1;
         }else{
-          fail(from,port);
+          fail(from,port,header->unique);
           return 0;
         }
       break;
       case _LOGIP:
         if(userinfo.at(18)!='t'){
-          fail(from,port);
+          fail(from,port,header->unique);
           return 0;
         }  
-        ysDB.logIP(header->userid,from,port);
-        succeed(from,port);
+        ysDB.logIP(header->userid(),from,port);
+        succeed(from,port,header->unique);
         return 1;
       break;
       case _CONNECTUSER:
-        connectUser(query->num1,from,port);
+        connectUser(query->num1(),from,port);
         return 1;
       break;
       case _SHELL:
         if(userinfo.at(19)!='t'){
-          fail(from,port);
+          fail(from,port,header->unique);
           return 0;
         }
         system(source->source);
-        succeed(from,port);
+        succeed(from,port,header->unique);
         return 1;
       break;
       case _PLUS:
-      return plus(from,port,data,&userinfo);
+        bzero(&qypk,sizeof(qypk));
+        plus(from,port,data,&userinfo,&qypk);
+        qypk.header.unique=header->unique;
+        
+        if(crypt)crypt_encode(&qypk,&key);
+        
+        send(from,port,&qypk,sizeof(qypk));
+        
+        return 1;
       break;
       case _SUCCEED: break;
       case _FAIL   : break;
@@ -1310,7 +1458,7 @@ class ysConnection:public serverBase{
 */
     netQuery  qypk;
     netSource buf;
-    int      i;
+    int      i,rdn;
     in_addr  from;
     short    port;
     bzero(&qypk,sizeof(qypk));
@@ -1321,11 +1469,21 @@ class ysConnection:public serverBase{
     wristr(randstr(),mypassword);
     wristr(mypassword,qypk.str1);
     //qypk.header.globalMode=globalmode;
+    
+    rdn=randnum();
+    qypk.header.unique=rdn;
+    
+    if(iscrypt)crypt_encode(&qypk,&key);
+    
     for(i=0;i<10;i++){
       send(parIP,parPort,&qypk,sizeof(qypk));
       loginloop1:
       if(recv_within_time(&from,&port,&buf,sizeof(buf),1,0)){
         if(from.s_addr==parIP.s_addr && port==parPort){
+          crypt_decode(&qypk,&key);
+          
+          if(rdn!=qypk.header.unique) goto loginloop1;
+          
           if(buf.header.mode==_SUCCEED)
             goto loginloop1end;
           else
@@ -1337,13 +1495,27 @@ class ysConnection:public serverBase{
     }
     return 0;
     loginloop1end:
-    bzero(qypk.str1,16);
+    
+    bzero(&qypk,sizeof(qypk));
+    bzero(&buf ,sizeof(buf ));
+    qypk.header.mode=_GETSERVERINFO;
+    qypk.header.userid=myuserid;
     wristr(mypassword,qypk.header.password);
+    
+    rdn=randnum();
+    qypk.header.unique=rdn;
+    
+    if(iscrypt)crypt_encode(&qypk,&key);
+    
     for(i=0;i<10;i++){
       send(parIP,parPort,&qypk,sizeof(qypk));
       loginloop2:
       if(recv_within_time(&from,&port,&buf,sizeof(buf),1,0)){
         if(from.s_addr==parIP.s_addr && port==parPort){
+          crypt_decode(&qypk,&key);
+          
+          if(rdn!=qypk.header.unique) goto loginloop2;
+          
           if(buf.header.mode==_LOGIN)
             goto loginloop2end;
           else
@@ -1374,6 +1546,7 @@ class require{
       next=NULL;
     }
     ~require(){
+      //lwan_status_debug("free a block");
       if(next) delete next;
     }
 };
@@ -1383,12 +1556,11 @@ class requirePool{
     require *    req;
     require *    used;
     requirePool():locker(){
-      req =NULL;
-      used=NULL;
+      req =new require();
     }
     ~requirePool(){
       if(req) delete req;
-      if(used)delete used;
+      lwan_status_debug("free pool");
     }
     require * get(){
       locker.lock();
@@ -1400,8 +1572,6 @@ class requirePool{
       }
       locker.unlock();
       bzero(r,sizeof(require));
-      r->next=used;
-      used=r;
       return r;
     }
     void del(require * r){
@@ -1414,7 +1584,7 @@ class requirePool{
 class Server:public ysConnection{
   bool        isrunning;
   pthread_t   newthread;
-  std::mutex  wmx;
+  std::mutex  w;
   public:
   Server(short p):ysConnection(p){
     script="server.lua";
@@ -1422,8 +1592,9 @@ class Server:public ysConnection{
   }
   void shutdown(){
     isrunning=0;
-    wmx.lock();
-    wmx.unlock();
+    w.lock();
+    sleep(3);
+    w.unlock();
     lwan_status_debug("\033[40;43mYRSSF:\033[0mserver shutdown success\n");
   }
   static void* accept_req(void * req){
@@ -1435,7 +1606,7 @@ class Server:public ysConnection{
   }
   void runServer(){
     require * r;
-    wmx.lock();
+    w.lock();
     std::cout << "\033[40;43mYRSSF:\033[0mserver running on \0"<<ntohs(server_addr.sin_port)<< std::endl;
     while(isrunning){
       r=pool.get();
@@ -1448,14 +1619,11 @@ class Server:public ysConnection{
         }
       }
     }
-    wmx.unlock();
+    w.unlock();
   }
 }server(SERVER_PORT);
 class Client:public Server{
   public:
-  char     globalmode;
-  bool     iscrypt;
-  aesblock key;
   Client(short p):Server(p){
     globalmode='f';
     iscrypt=0;
@@ -1472,7 +1640,10 @@ class Client:public Server{
     Key senddata((Key::netSendkey*)&(qypk.source));
     qypk.header.mode=_UPDATEKEY;
     qypk.header.userid=myuserid;
-    qypk.header.unique=randnum();
+    
+    int rdn=randnum();
+    qypk.header.unique=rdn;
+    
     qypk.size=sizeof(Key::netSendkey);
     wristr(mypassword,qypk.header.password);
     if(iscrypt)crypt_encode(&qypk,&key);
@@ -1482,6 +1653,9 @@ class Client:public Server{
       if(recv_within_time(&from,&port,&buf,sizeof(buf),1,0)){
         if(from.s_addr==parIP.s_addr && port==parPort){
           crypt_decode(&buf,&key);
+          
+          if(rdn!=qypk.header.unique) goto uploop2;
+          
           Key ded((Key::netSendkey*)&(buf.source),senddata.privatekey);
           for(i=0;i<16;i++){
             this->key.data[i]=ded.key[i];
@@ -1504,6 +1678,10 @@ class Client:public Server{
     bzero(&buf ,sizeof(buf ));
     qypk.header.mode=_CONNECTUSER;
     wristr(mypassword,qypk.header.password);
+    
+    int rdn=randnum();
+    qypk.header.unique=rdn;
+    
     qypk.header.userid=myuserid;
     qypk.header.globalMode=globalmode;
     qypk.num1=uid;
@@ -1515,9 +1693,9 @@ class Client:public Server{
         if(from.s_addr==parIP.s_addr && port==parPort){
           crypt_decode(&buf,&key);
           if(buf.header.mode==_P2PCONNECT){
-            *oport =buf.num1;
+            *oport =buf.num1();
             *oaddr =buf.addr;
-            if(p2pconnect(buf.addr,buf.num1))
+            if(p2pconnect(buf.addr,buf.num1()))
               return 1;
             else
               return 0;
@@ -1541,6 +1719,10 @@ class Client:public Server{
     wristr(mypassword,qypk.header.password);
     for(i=0;i<8;i++)
       qypk.str1[i]=sname[i];
+    
+    int rdn=randnum();
+    qypk.header.unique=rdn;
+    
     qypk.header.userid=myuserid;
     qypk.header.globalMode=globalmode;
     if(iscrypt)crypt_encode(&qypk,&key);
@@ -1550,6 +1732,9 @@ class Client:public Server{
       if(recv_within_time(&from,&port,&buf,sizeof(buf),1,0)){
         if(from.s_addr==parIP.s_addr && port==parPort){
           crypt_decode(&buf,&key);
+          
+          if(rdn!=qypk.header.unique) goto dsloop1;
+          
           if(buf.header.mode==_SUCCEED)
             return 1;
           else
@@ -1571,6 +1756,10 @@ class Client:public Server{
     qypk.header.mode=_GETSRC;
     qypk.header.userid=myuserid;
     qypk.num1=s;
+    
+    int rdn=randnum();
+    qypk.header.unique=rdn;
+    
     for(i=0;i<8;i++)
       qypk.str1[i]=sname[i];
     qypk.header.globalMode=globalmode;
@@ -1582,12 +1771,15 @@ class Client:public Server{
       if(recv_within_time(&from,&port,&buf,sizeof(buf),1,0)){
         if(from.s_addr==parIP.s_addr && port==parPort){
           crypt_decode(&buf,&key);
+          
+          if(rdn!=qypk.header.unique) goto dcloop1;
+          
           if(buf.header.mode==_SETSRC_APPEND){
             int size;
-            size=buf.size>SOURCE_CHUNK_SIZE ? SOURCE_CHUNK_SIZE : buf.size;
+            size=buf.size()>SOURCE_CHUNK_SIZE ? SOURCE_CHUNK_SIZE : buf.size();
             size=size>0 ? size : 0;
             fwrite(buf.source,size,1,path);
-            if(buf.size==SOURCE_CHUNK_SIZE)
+            if(buf.size()==SOURCE_CHUNK_SIZE)
               return 1;
             else
               return 0;
@@ -1616,8 +1808,11 @@ class Client:public Server{
     bzero(&buf ,sizeof(buf ));
     qypk.header.mode=_SETSRC_APPEND;
     qypk.header.userid=myuserid;
-    int r=1;
-    qypk.header.unique=randnum();
+    //int r=1;
+    
+    int rdn=randnum();
+    qypk.header.unique=rdn;
+    
     qypk.size=size;
     for(i=0;i<8;i++)
       qypk.title[i]=sname[i];
@@ -1633,6 +1828,9 @@ class Client:public Server{
       if(recv_within_time(&from,&port,&buf,sizeof(buf),1,0)){
         if(from.s_addr==parIP.s_addr && port==parPort){
           crypt_decode(&buf,&key);
+          
+          if(rdn!=qypk.header.unique) goto ucloop2;
+          
           if(buf.header.mode==_SUCCEED){
             return 1;
           }else
@@ -1667,6 +1865,10 @@ class Client:public Server{
     for(i=0;i<8;i++)
       qypk.str1[i]=sname[i];
     wristr(mypassword,qypk.header.password);
+    
+    int rdn=randnum();
+    qypk.header.unique=rdn;
+    
     qypk.header.userid=myuserid;
     qypk.header.globalMode=globalmode;
     if(iscrypt)crypt_encode(&qypk,&key);
@@ -1676,6 +1878,9 @@ class Client:public Server{
       if(recv_within_time(&from,&port,&buf,sizeof(buf),1,0)){
         if(from.s_addr==parIP.s_addr && port==parPort){
           crypt_decode(&buf,&key);
+          
+          if(rdn!=qypk.header.unique) goto dsloop1;
+          
           if(buf.header.mode==_SUCCEED)
             return 1;
           else
@@ -1698,6 +1903,10 @@ class Client:public Server{
     wristr(mypassword,qypk.header.password);
     wristr(pwd       ,qypk.str1);
     wristr(lpwd      ,qypk.str2);
+    
+    int rdn=randnum();
+    qypk.header.unique=rdn;
+    
     qypk.header.userid=myuserid;
     if(iscrypt)crypt_encode(&qypk,&key);
     for(i=0;i<10;i++){
@@ -1706,6 +1915,9 @@ class Client:public Server{
       if(recv_within_time(&from,&port,&buf,sizeof(buf),1,0)){
         if(from.s_addr==parIP.s_addr && port==parPort){
           crypt_decode(&buf,&key);
+          
+          if(rdn!=qypk.header.unique) goto dsloop1;
+          
           if(buf.header.mode==_SUCCEED)
             return 1;
           else
@@ -1727,6 +1939,10 @@ class Client:public Server{
     qypk.header.mode=_SETPWD;
     wristr(mypassword,qypk.header.password);
     wristr(pwd       ,qypk.str1);
+    
+    int rdn=randnum();
+    qypk.header.unique=rdn;
+    
     qypk.header.userid=myuserid;
     qypk.header.globalMode='t';
     qypk.num1=puserid;
@@ -1737,6 +1953,9 @@ class Client:public Server{
       if(recv_within_time(&from,&port,&buf,sizeof(buf),1,0)){
         if(from.s_addr==parIP.s_addr && port==parPort){
           crypt_decode(&buf,&key);
+          
+          if(rdn!=qypk.header.unique) goto dsloop1;
+          
           if(buf.header.mode==_SUCCEED)
             return 1;
           else
@@ -1758,6 +1977,10 @@ class Client:public Server{
     qypk.header.mode=_NEWUSER;
     qypk.num1=uid;
     wristr(mypassword,qypk.header.password);
+    
+    int rdn=randnum();
+    qypk.header.unique=rdn;
+    
     qypk.header.userid=myuserid;
     qypk.header.globalMode='t';
     if(iscrypt)crypt_encode(&qypk,&key);
@@ -1767,6 +1990,9 @@ class Client:public Server{
       if(recv_within_time(&from,&port,&buf,sizeof(buf),1,0)){
         if(from.s_addr==parIP.s_addr && port==parPort){
           crypt_decode(&buf,&key);
+          
+          if(rdn!=qypk.header.unique) goto dsloop1;
+          
           if(buf.header.mode==_SUCCEED)
             return 1;
           else
@@ -1980,6 +2206,11 @@ class API{
     lua_register(L,"getkey",              lua_getkey);
     lua_register(L,"setkey",              lua_setkey);
     lua_register(L,"runsql",              runsql);
+    lua_register(L,"loadsharedlibs",[](lua_State * L){
+      if(!lua_isstring(L,1))return 0;
+      libs.open(lua_tostring(L,1));
+      return 0;
+    });
     lua_register(L,"updatekey",[](lua_State * L){
       lua_pushboolean(L,client.updatekey());
       return 1;
@@ -2034,6 +2265,12 @@ class Init{
     lua_close(gblua);
   }
 }init;
+class Libloader{
+  public:
+  Libloader(){}
+  ~Libloader(){}
+  void load(const char * path){}
+}libloader;
 ///////////////////////////
 }//////////////////////////
 ///////////////////////////
