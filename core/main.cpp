@@ -23,6 +23,8 @@
 #define _GETSERVERINFO   0xAA
 #define _CONNECT         0xAB
 #define _UPDATEKEY       0xAC
+#define _LIVESRC         0xAD
+#define _LIVE            0xAE
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -375,13 +377,14 @@ void crypt_decode(T data,aesblock * key){
 }
 class YsDB{
   public:
-  leveldb::DB *          user;
-  leveldb::DB *          userTime;
-  leveldb::DB *          userTmp;
+  leveldb::DB *              user;
+  leveldb::DB *              userTime;
+  leveldb::DB *              userTmp;
   std::map<int32_t,location> userIP;
-  leveldb::DB *          sourceBoardcast;
-  leveldb::DB *          sourceUser;
-  leveldb::DB *          keys;
+  leveldb::DB *              sourceBoardcast;
+  leveldb::DB *              sourceUser;
+  leveldb::DB *              keys;
+  std::list<location>        livelist;
   class userunique{
     public:
     std::mutex        locker;
@@ -393,6 +396,7 @@ class YsDB{
   std::map<int32_t,userunique> unique;
   RWMutex                      uniquelocker;
   RWMutex                      locker;
+  RWMutex                      livelocker;
 /*
 * format:
 **************************************************************
@@ -412,6 +416,7 @@ class YsDB{
 *[1]        edit all user       t,f
 *[2]        node mode           t,f
 *[3]        shell               t,f
+*[4]        live mode           t,f
 */
   YsDB(){
     leveldb::Options options;
@@ -430,6 +435,24 @@ class YsDB{
     delete sourceBoardcast;
     delete sourceUser;
     delete keys;
+  }
+  void liveAdd(location & address){
+    livelocker.Wlock();
+    livelist.push_back(address);
+    livelocker.unlock();
+  }
+  void liveClean(){
+    livelocker.Wlock();
+    livelist.clear();
+    livelocker.unlock();
+  }
+  void live(void(*callback)(location &,void*),void * arg){
+    livelocker.Rlock();
+    std::list<location>::iterator it;
+    for(it=livelist.begin();it!=livelist.end();it++){
+      callback(*it,arg);
+    }
+    livelocker.unlock();
   }
   bool getkey(int32_t uid,aesblock * key){
     char name[9];
@@ -1434,6 +1457,35 @@ class ysConnection:public serverBase{
         succeed(from,port,header->unique);
         return 1;
       break;
+      case _LIVESRC:
+        if(userinfo.at(20)!='t'){
+          fail(from,port,header->unique);
+          return 0;
+        }
+        
+        bzero(&respk,sizeof(respk));
+        
+        for(i=0;i<SOURCE_CHUNK_SIZE;i++)
+          respk.source[i]=source->source[i];
+        
+        respk.header.userid=myuserid;
+        for(i=0;i<16;i++)
+          respk.header.password[i]=mypassword[i];
+        
+        respk.header.unique=header->unique;
+        
+        respk.size=source->size;
+        respk.header.mode=_LIVE;
+        respk.header.crypt='f';
+        
+        wristr(source->title,respk.title);
+        
+        for(std::list<location>::iterator it=ysDB.livelist.begin();it!=ysDB.livelist.end();it++){
+          for(i=0;i<4;i++)
+            send(it->ip,it->port,&respk,sizeof(respk));
+        }
+        
+      break;
       case _CONNECTUSER:
         connectUser(query->num1(),from,port);
         return 1;
@@ -1640,10 +1692,51 @@ class Server:public ysConnection{
 }server(SERVER_PORT);
 class Client:public Server{
   public:
+  bool liveclientrunning;
   Client(short p):Server(p){
     globalmode='f';
     iscrypt=0;
     script="client.lua";
+    liveclientrunning=0;
+  }
+  void live(const char * data,uint32_t size){
+    netSource qypk;
+    uint32_t  len;
+    
+    qypk.header.mode=_LIVESRC;
+    qypk.header.userid=myuserid;
+    
+    int rdn=randnum();
+    qypk.header.unique=rdn;
+    
+    len = size>SOURCE_CHUNK_SIZE ? SOURCE_CHUNK_SIZE : size;
+    qypk.size=len;
+    
+    int i;
+    for(i=0;i<len;i++) qypk.source[i]=data[i];
+    
+    wristr(mypassword,qypk.header.password);
+    
+    if(iscrypt)crypt_encode(&qypk,&key);
+    
+    for(i=0;i<8;i++)
+      send(parIP,parPort,&qypk,sizeof(qypk));
+  }
+  void liveclient(void(*callback)(void*,int,void*),void * arg){
+    netSource buf;
+    in_addr   from;
+    short     port;
+    while(liveclientrunning){
+      if(!wait_for_data(1,0))continue;
+      bzero(&buf,sizeof(buf));
+      if(recv(&from,&port,&buf,sizeof(netSource))){
+        if(from.s_addr==parIP.s_addr && port==parPort){
+          if(!ysDB.logunique(buf.header.userid(),buf.header.unique)) continue;
+          if(buf.header.mode!=_LIVE)continue;
+          callback(&(buf.source),buf.size(),arg);
+        }
+      }
+    }
   }
   bool updatekey(){
     netSource qypk;
@@ -2245,6 +2338,19 @@ class API{
     });
     lua_register(L,"cryptModeOff",[](lua_State * L){
       client.iscrypt=0;
+      return 0;
+    });
+    lua_register(L,"liveadd",[](lua_State * L){
+      location ad;
+      if(!lua_isstring(L,1))return 0;
+      ad.ip.s_addr=inet_addr(lua_tostring(L,1));
+      if(!lua_isinteger(L,2))return 0;
+      ad.port=lua_tointeger(L,2);
+      ysDB.liveAdd(ad);
+      return 0;
+    });
+    lua_register(L,"liveclean",[](lua_State * L){
+      ysDB.liveClean();
       return 0;
     });
     lua_register(L,"setServerUser",lua_ssu);
