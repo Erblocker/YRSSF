@@ -52,6 +52,7 @@ extern "C" {
 #include "zlib.h"
 }
 #include "ecc.hpp"
+#include "rwmutex.hpp"
 #include <cassert>
 #include <iostream>
 #include <stdio.h>
@@ -349,8 +350,8 @@ struct aesblock{
 template<typename T>
 void crypt_encode(T data,aesblock * key){
   if(data->header.crypt=='t')return;
-  aesblock * here =(aesblock*)&(data->header.unique);
-  aesblock * end  =(aesblock*)&(data->endchunk[0]);
+  register aesblock * here =(aesblock*)&(data->header.unique);
+  register aesblock * end  =(aesblock*)&(data->endchunk[0]);
   aesblock buf;
   data->header.crypt='t';
   while(here<end){
@@ -362,8 +363,8 @@ void crypt_encode(T data,aesblock * key){
 template<typename T>
 void crypt_decode(T data,aesblock * key){
   if(data->header.crypt!='t')return;
-  aesblock * here =(aesblock*)&(data->header.unique);
-  aesblock * end  =(aesblock*)&(data->endchunk[0]);
+  register aesblock * here =(aesblock*)&(data->header.unique);
+  register aesblock * end  =(aesblock*)&(data->endchunk[0]);
   aesblock buf;
   data->header.crypt='f';
   while(here<end){
@@ -390,8 +391,8 @@ class YsDB{
   };
   
   std::map<int32_t,userunique> unique;
-  std::mutex                   uniquelocker;
-  std::mutex                   locker;
+  RWMutex                      uniquelocker;
+  RWMutex                      locker;
 /*
 * format:
 **************************************************************
@@ -449,9 +450,20 @@ class YsDB{
   }
   bool logunique(int32_t uid,int32_t lid){
     if(lid==0)return 1;
-    uniquelocker.lock();
-    userunique * u=&unique[uid];
+    
+    uniquelocker.Rlock();
+    auto pt=unique.find(uid);
     uniquelocker.unlock();
+    
+    userunique * u;
+    if(pt==unique.end()){
+      uniquelocker.Wlock();
+      u=&unique[uid];
+      uniquelocker.unlock();
+    }else{
+      u=&pt->second;
+    }
+    
     bool result;
     u->locker.lock();
     if(u->uni.find(lid)==u->uni.end()){
@@ -630,7 +642,7 @@ class YsDB{
     return 1;
   }
   void logIP(int32_t userid,in_addr ip,short port){
-    locker.lock();
+    locker.Wlock();
     location p;
     p.ip=ip;
     p.port=port;
@@ -638,15 +650,19 @@ class YsDB{
     locker.unlock();
   }
   bool getUserIP(int32_t userid,in_addr *ip,short *port){
-    locker.lock();
-    location &p=userIP[userid];
+    locker.Rlock();
+    auto pt=userIP.find(userid);
+    if(pt==userIP.end()){
+      *port=0;
+      ip->s_addr=0;
+      locker.unlock();
+      return 0;
+    }
+    location &p=pt->second;
     *ip=p.ip;
     *port=p.port;
     locker.unlock();
-    if(p.port==0)
-      return 0;
-    else
-      return 1;
+    return 1;
   }
 }ysDB;
 class serverBase{
