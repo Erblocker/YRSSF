@@ -2119,12 +2119,9 @@ class Client:public Server{
 sqlite3  * db;
 std::mutex clientlocker;
 bool clientdisabled=0;
-static char * livebuffer;
+int livefifo;
 static bool runliveclient_cb(void * data,int size,void*){
-  char * d = (char*)data;
-  for(int i=0;(i<size && i<SOURCE_CHUNK_SIZE);i++){
-    livebuffer[i]=d[i];
-  }
+  write(livefifo,data,size>SOURCE_CHUNK_SIZE?SOURCE_CHUNK_SIZE:size);
   return 1;
 }
 static void * runliveclient_th(void *){
@@ -2160,24 +2157,13 @@ class API{
     });
     signal(12,[](int){
       client.liveclientrunning=0;
+      clientdisabled=0;
     });
-    int filed;
-    createshm:
-    filed=open("live",O_RDWR|O_CREAT,0755);
-    close(filed);
-    shmid=shmget(ftok("live",1),SOURCE_CHUNK_SIZE,IPC_CREAT|IPC_EXCL|0660);
-    if(shmid==-1){
-      perror("shmget()");
-      remove("live");
-      goto createshm;
-    }
-    livebuffer=(char*)shmat(shmid,0,0);
+    livefifo=mkfifo("live",0666);
   }
   ~API(){
     if(db)sqlite3_close(db);
-    if((shmctl(shmid, IPC_RMID, 0) < 0)){
-      printf("shmctl error:%s\n", strerror(errno));
-    }
+    close(livefifo);
   }
   struct runsqlcbs{
     lua_State * lua;
@@ -2440,6 +2426,7 @@ class API{
     });
     lua_register(L,"liveModeOff",[](lua_State * L){
       client.liveclientrunning=0;
+      clientdisabled=0;
       return 0;
     });
     lua_register(L,"setServerUser",lua_ssu);
