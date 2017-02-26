@@ -30,6 +30,9 @@
 #include <sys/socket.h>
 #include <sys/file.h>
 #include <arpa/inet.h>
+#include <sys/shm.h>
+#include <sys/ipc.h>
+#include <sys/stat.h>
 #include <pthread.h>
 #include <netinet/in.h> 
 #include <unistd.h>
@@ -1722,7 +1725,7 @@ class Client:public Server{
     for(i=0;i<8;i++)
       send(parIP,parPort,&qypk,sizeof(qypk));
   }
-  void liveclient(void(*callback)(void*,int,void*),void * arg){
+  void liveclient(bool(*callback)(void*,int,void*),void * arg){
     netSource buf;
     in_addr   from;
     short     port;
@@ -1733,7 +1736,7 @@ class Client:public Server{
         if(from.s_addr==parIP.s_addr && port==parPort){
           if(!ysDB.logunique(buf.header.userid(),buf.header.unique)) continue;
           if(buf.header.mode!=_LIVE)continue;
-          callback(&(buf.source),buf.size(),arg);
+          if(!callback(&(buf.source),buf.size(),arg))return;
         }
       }
     }
@@ -2113,8 +2116,35 @@ class Client:public Server{
     }
   }
 }client(CLIENT_PORT);
-sqlite3 * db;
+sqlite3  * db;
+std::mutex clientlocker;
+bool clientdisabled=0;
+static char * livebuffer;
+static bool runliveclient_cb(void * data,int size,void*){
+  char * d = (char*)data;
+  for(int i=0;(i<size && i<SOURCE_CHUNK_SIZE);i++){
+    livebuffer[i]=d[i];
+  }
+  return 1;
+}
+static void * runliveclient_th(void *){
+  if(clientdisabled)return 0;
+  clientdisabled=1;
+  clientlocker.lock();
+  client.liveclientrunning=1;
+  lwan_status_debug("live mode on");
+  client.liveclient(runliveclient_cb,NULL);
+  lwan_status_debug("live mode off");
+  clientlocker.unlock();
+  clientdisabled=0;
+}
+static int runliveclient(){
+  pthread_t newthread;
+  if(pthread_create(&newthread,NULL,runliveclient_th,NULL)!=0)
+    perror("pthread_create");
+}
 class API{
+  int shmid;
   public:
   API(){
     db=NULL;
@@ -2124,9 +2154,30 @@ class API{
       lwan_status_debug("can not open %s \n", sqlite3_errmsg(db));
       return;
     }
+    signal(10,[](int){
+      client.liveclientrunning=1;
+      runliveclient();
+    });
+    signal(12,[](int){
+      client.liveclientrunning=0;
+    });
+    int filed;
+    createshm:
+    filed=open("live",O_RDWR|O_CREAT,0755);
+    close(filed);
+    shmid=shmget(ftok("live",1),SOURCE_CHUNK_SIZE,IPC_CREAT|IPC_EXCL|0660);
+    if(shmid==-1){
+      perror("shmget()");
+      remove("live");
+      goto createshm;
+    }
+    livebuffer=(char*)shmat(shmid,0,0);
   }
   ~API(){
     if(db)sqlite3_close(db);
+    if((shmctl(shmid, IPC_RMID, 0) < 0)){
+      printf("shmctl error:%s\n", strerror(errno));
+    }
   }
   struct runsqlcbs{
     lua_State * lua;
@@ -2175,6 +2226,7 @@ class API{
     }
   }
   static int lua_upload(lua_State * L){
+      if(clientdisabled)return 0;
       char str[9];
       str[8]='\0';
       if(!lua_isstring(L,1))return 0;
@@ -2185,10 +2237,13 @@ class API{
         if(sname[i]=='\0')
           break;
       }
+      clientlocker.lock();
       client.upload(str,lua_tostring(L,2));
+      clientlocker.unlock();
       return 0;
   }
   static int lua_download(lua_State * L){
+      if(clientdisabled)return 0;
       char str[9];
       str[8]='\0';
       if(!lua_isstring(L,1))return 0;
@@ -2199,10 +2254,13 @@ class API{
         if(sname[i]=='\0')
           break;
       }
+      clientlocker.lock();
       client.download(str,lua_tostring(L,2));
+      clientlocker.unlock();
       return 0;
   }
   static int lua_del(lua_State * L){
+      if(clientdisabled)return 0;
       char str[9];
       str[8]='\0';
       if(!lua_isstring(L,1))return 0;
@@ -2212,32 +2270,45 @@ class API{
         if(sname[i]=='\0')
           break;
       }
+      clientlocker.lock();
       client.del(str);
+      clientlocker.unlock();
       return 0;
   }
   static int lua_setPwd(lua_State * L){
+      if(clientdisabled)return 0;
       if(lua_isstring(L,1)){
         if(!lua_isstring(L,2))return 0;
+        clientlocker.lock();
         client.setPwd(lua_tostring(L,1),lua_tostring(L,2));
+        clientlocker.unlock();
         return 0;
       }else
       if(lua_isinteger(L,1)){
         if(!lua_isstring(L,2))return 0;
+        clientlocker.lock();
         client.setPwd(lua_tostring(L,2),(int32_t)lua_tointeger(L,1));
+        clientlocker.unlock();
         return 0;
       }
   }
   static int lua_newUser(lua_State * L){
+      if(clientdisabled)return 0;
       if(!lua_isinteger(L,1))return 0;
+      clientlocker.lock();
       client.newUser(lua_tointeger(L,1));
+      clientlocker.unlock();
       return 0;
   }
-  static int lua_cps(lua_State * L){
+  static int lua_cps(lua_State * L){//change parent server
+      if(clientdisabled)return 0;
       if(!lua_isstring (L,1))return 0;
       if(!lua_isinteger(L,2))return 0;
       in_addr addr;
       addr.s_addr=inet_addr(lua_tostring(L,1));
+      clientlocker.lock();
       lua_pushboolean(L,client.changeParentServer(addr,lua_tointeger(L,2)));
+      clientlocker.unlock();
       return 1;
   }
   static int lua_ssu(lua_State * L){
@@ -2248,6 +2319,7 @@ class API{
       return 0;
   }
   static int lua_scu(lua_State * L){
+      if(clientdisabled)return 0;
       if(!lua_isstring (L,2))return 0;
       if(!lua_isinteger(L,1))return 0;
       client.myuserid=lua_tointeger(L,1);
@@ -2264,15 +2336,19 @@ class API{
     return 0;
   }
   static int lua_connectToUser(lua_State * L){
+    if(clientdisabled)return 0;
     in_addr addr;
     short   port;
     if(!lua_isinteger(L,1))return 0;
+    clientlocker.lock();
     lua_pushboolean(L,(client.connectToUser(lua_tointeger(L,1),&addr,&port)));
+    clientlocker.unlock();
     lua_pushstring(L,inet_ntoa(addr));
     lua_pushinteger(L,port);
     return 3;
   }
   static int lua_setkey(lua_State * L){
+    if(clientdisabled)return 0;
     aesblock key;
     bzero(&key,sizeof(key));
     const char * str;
@@ -2321,7 +2397,10 @@ class API{
       return 0;
     });
     lua_register(L,"updatekey",[](lua_State * L){
+      if(clientdisabled)return 0;
+      clientlocker.lock();
       lua_pushboolean(L,client.updatekey());
+      clientlocker.unlock();
       return 1;
     });
     lua_register(L,"globalModeOn",[](lua_State * L){
@@ -2351,6 +2430,16 @@ class API{
     });
     lua_register(L,"liveclean",[](lua_State * L){
       ysDB.liveClean();
+      return 0;
+    });
+    lua_register(L,"liveModeOn",[](lua_State * L){
+      if(clientdisabled)return 0;
+      client.liveclientrunning=1;
+      runliveclient();
+      return 0;
+    });
+    lua_register(L,"liveModeOff",[](lua_State * L){
+      client.liveclientrunning=0;
       return 0;
     });
     lua_register(L,"setServerUser",lua_ssu);
