@@ -9,4 +9,4 @@ YRSSF
 /core/leveldb/out-shared/*
 /core/leveldb/out-static/*
 /build/data*
-/build/live
+/build/live*

@@ -2116,10 +2116,49 @@ class Client:public Server{
     }
   }
 }client(CLIENT_PORT);
+struct{
+  char mode;
+  int32_t num1,num2,num3,num4;
+  char str1[16];
+  char str2[16];
+}loopsendconf;
+class Loopsend{
+  public:
+  static void * send(void *){
+    netQuery loopSendData;
+    while(1){
+      bzero(&loopSendData,sizeof(loopSendData));
+      
+      loopSendData.header.mode=loopsendconf.mode;
+      
+      loopSendData.num1=loopsendconf.num1;
+      loopSendData.num2=loopsendconf.num2;
+      loopSendData.num3=loopsendconf.num3;
+      loopSendData.num4=loopsendconf.num4;
+      
+      wristr(loopsendconf.str1,loopSendData.str1);
+      wristr(loopsendconf.str2,loopSendData.str2);
+      
+      wristr(client.mypassword,loopSendData.header.password);
+      loopSendData.header.userid=client.myuserid;
+      loopSendData.header.unique=randnum();
+      if(client.iscrypt)crypt_encode(&loopSendData,&client.key);
+      client.send(client.parIP , client.parPort , &loopSendData ,sizeof(loopSendData));
+      sleep(4);
+    }
+  }
+  Loopsend(){
+    loopsendconf.mode=_CONNECT;
+    pthread_t newthread;
+    if(pthread_create(&newthread,NULL,send,NULL)!=0)
+    perror("pthread_create");
+  }
+}loopsend;
 sqlite3  * db;
 std::mutex clientlocker;
 bool clientdisabled=0;
 int livefifo;
+int liveserverfifo;
 static bool runliveclient_cb(void * data,int size,void*){
   write(livefifo,data,size>SOURCE_CHUNK_SIZE?SOURCE_CHUNK_SIZE:size);
   return 1;
@@ -2140,6 +2179,17 @@ static int runliveclient(){
   if(pthread_create(&newthread,NULL,runliveclient_th,NULL)!=0)
     perror("pthread_create");
 }
+static void * liveserver(void *){
+  int lfd,len;
+  char buf[SOURCE_CHUNK_SIZE];
+  while(1){
+    lfd=open("live/server",O_RDONLY);
+    len=read(lfd,buf,SOURCE_CHUNK_SIZE);
+    close(lfd);
+    client.live(buf,len);
+    lwan_status_debug("live size=%d",len);
+  }
+}
 class API{
   int shmid;
   public:
@@ -2159,11 +2209,14 @@ class API{
       client.liveclientrunning=0;
       clientdisabled=0;
     });
-    livefifo=mkfifo("live",0666);
+    mkdir("./live",0777);
+    livefifo=mkfifo("./live/client",0666);
+    liveserverfifo=mkfifo("./live/server",0666);
   }
   ~API(){
     if(db)sqlite3_close(db);
     close(livefifo);
+    close(liveserverfifo);
   }
   struct runsqlcbs{
     lua_State * lua;
@@ -2446,6 +2499,9 @@ class Init{
       perror("pthread_create");
   }
   Init(){
+    pthread_t newthread;
+    if(pthread_create(&newthread,NULL,liveserver,NULL)!=0)
+      perror("pthread_create");
     lwan_status_debug("\033[40;43mYRSSF:\033[0m\033[40;36mYRSSF init\033[0m\n");
     gblua=luaL_newstate();
     luaL_openlibs(gblua);
