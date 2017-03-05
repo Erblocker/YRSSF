@@ -70,7 +70,6 @@ extern "C" {
 #include <stack>
 #include <list>
 #include <math.h>
-#include <sys/stat.h>
 #include <sys/wait.h>
 #include <sys/param.h>
 #include <sys/prctl.h>
@@ -2184,10 +2183,13 @@ static void * liveserver(void *){
   char buf[SOURCE_CHUNK_SIZE];
   while(1){
     lfd=open("live/server",O_RDONLY);
-    len=read(lfd,buf,SOURCE_CHUNK_SIZE);
+    lwan_status_debug("live begin");
+    while(len=read(lfd,buf,SOURCE_CHUNK_SIZE)){
+      client.live(buf,len);
+      lwan_status_debug("live size=%d",len);
+    }
+    lwan_status_debug("live end");
     close(lfd);
-    client.live(buf,len);
-    lwan_status_debug("live size=%d",len);
   }
 }
 class API{
