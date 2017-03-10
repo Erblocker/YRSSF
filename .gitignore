@@ -10,3 +10,6 @@ YRSSF
 /core/leveldb/out-static/*
 /build/data*
 /build/live*
+/build/live-client
+/build/launcher
+/build/daemon

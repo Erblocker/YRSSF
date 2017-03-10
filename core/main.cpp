@@ -1616,7 +1616,7 @@ class require{
       next=NULL;
     }
     ~require(){
-      //lwan_status_debug("free a block");
+      lwan_status_debug("free a block");
       if(next) delete next;
     }
 };
@@ -1625,17 +1625,26 @@ class requirePool{
     std::mutex   locker;
     require *    req;
     require *    used;
+    int          mallocCount;
+    int          usingCount;
     requirePool():locker(){
       req =new require();
+      mallocCount=1;
+      usingCount=0;
     }
     ~requirePool(){
       if(req) delete req;
+      lwan_status_debug("mallocCount=%d",mallocCount);
+      lwan_status_debug("usingCount=%d",usingCount);
       lwan_status_debug("free pool");
     }
     require * get(){
       locker.lock();
+      //lwan_status_debug("get chunk");
       auto r=req;
+      usingCount++;
       if(req==NULL){
+        mallocCount++;
         r=new require();
       }else{
         req=r->next;
@@ -1648,6 +1657,21 @@ class requirePool{
       locker.lock();
       r->next=req;
       req=r;
+      usingCount--;
+      //lwan_status_debug("del chunk");
+      locker.unlock();
+    }
+    void freeone(){
+      locker.lock();
+      auto r=req;
+      if(req==NULL){
+        locker.unlock();
+        return;
+      }
+      req=r->next;
+      mallocCount--;
+      r->next=NULL;
+      delete r;
       locker.unlock();
     }
 }pool;
@@ -1678,17 +1702,19 @@ class Server:public ysConnection{
     require * r;
     w.lock();
     std::cout << "\033[40;43mYRSSF:\033[0mserver running on \0"<<ntohs(server_addr.sin_port)<< std::endl;
+    r=pool.get();
+    r->self=this;
     while(isrunning){
-      r=pool.get();
-      r->self=this;
       if(!wait_for_data(1,0))continue;
       if(recv(&(r->from),&(r->port),r->buffer,sizeof(netSource))){
         if(pthread_create(&newthread,NULL,accept_req,r)!=0){
           perror("pthread_create");
-          pool.del(r);
         }
+        r=pool.get();
+        r->self=this;
       }
     }
+    pool.del(r);
     w.unlock();
   }
 }server(SERVER_PORT);
@@ -1720,6 +1746,23 @@ class Client:public Server{
     wristr(mypassword,qypk.header.password);
     
     if(iscrypt)crypt_encode(&qypk,&key);
+    
+    for(i=0;i<8;i++)
+      send(parIP,parPort,&qypk,sizeof(qypk));
+  }
+  void live(netSource * qypk){
+    uint32_t  len;
+    int i;
+    
+    qypk->header.mode=_LIVESRC;
+    qypk->header.userid=myuserid;
+    
+    int rdn=randnum();
+    qypk->header.unique=rdn;
+    
+    wristr(mypassword,qypk->header.password);
+    
+    if(iscrypt)crypt_encode(qypk,&key);
     
     for(i=0;i<8;i++)
       send(parIP,parPort,&qypk,sizeof(qypk));
@@ -2150,7 +2193,7 @@ class Loopsend{
     loopsendconf.mode=_CONNECT;
     pthread_t newthread;
     if(pthread_create(&newthread,NULL,send,NULL)!=0)
-    perror("pthread_create");
+      perror("pthread_create");
   }
 }loopsend;
 sqlite3  * db;
@@ -2178,15 +2221,30 @@ static int runliveclient(){
   if(pthread_create(&newthread,NULL,runliveclient_th,NULL)!=0)
     perror("pthread_create");
 }
+static void * liveserver_cb(void * arg){
+  auto req=(require*)arg;
+  auto bufm=(netSource*)(req->buffer);
+  client.live(bufm);
+  lwan_status_debug("live size=%d",bufm->size());
+  pool.del(req);
+}
+require *  liveserverreq;
 static void * liveserver(void *){
   int lfd,len;
-  char buf[SOURCE_CHUNK_SIZE];
+  pthread_t newthread;
+  liveserverreq=pool.get();
+  auto bufm=(netSource*)(liveserverreq->buffer);
+  auto buf=bufm->source;
   while(1){
     lfd=open("live/server",O_RDONLY);
     lwan_status_debug("live begin");
     while(len=read(lfd,buf,SOURCE_CHUNK_SIZE)){
-      client.live(buf,len);
-      lwan_status_debug("live size=%d",len);
+      bufm->size=len;
+      if(pthread_create(&newthread,NULL,liveserver_cb,liveserverreq)!=0)
+        perror("pthread_create");
+      liveserverreq=pool.get();
+      bufm=(netSource*)(liveserverreq->buffer);
+      buf=bufm->source;
     }
     lwan_status_debug("live end");
     close(lfd);
@@ -2219,6 +2277,7 @@ class API{
     if(db)sqlite3_close(db);
     close(livefifo);
     close(liveserverfifo);
+    pool.del(liveserverreq);
   }
   struct runsqlcbs{
     lua_State * lua;

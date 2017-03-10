@@ -44,8 +44,8 @@ class mywindow{
   SDL_Surface * surface;
   int width,height;
   mywindow(){
-    width=300;
-    height=300;
+    width=600;
+    height=500;
     if((SDL_Init(SDL_INIT_VIDEO|SDL_INIT_AUDIO|SDL_FULLSCREEN)==-1)) {
       exit(-1);
     }
@@ -104,8 +104,11 @@ class connection{
   };
   void resolv(void * inp){
     netPack * in=(netPack*)inp;
-    if(in->m!='w') return;
-    mw.drawbitmap(in->data,in->x(),in->y(),in->w(),in->h(),((char*)in)+4096);
+    switch(in->m){
+      case 'w':
+        mw.drawbitmap(in->data,in->x(),in->y(),in->w(),in->h(),((char*)in)+4096);
+      break;
+    }
   }
   void autoresolv(){
     char buffer[4096];
@@ -127,7 +130,7 @@ class connection{
 class boardcast{
   int fd;
   public:
-  mywindow::pixel buffer[500][600];
+  mywindow::pixel buffer[600][500];
   boardcast(){
     fd=open(serverpipe,O_WRONLY);
   }
@@ -135,7 +138,7 @@ class boardcast{
     close(fd);
   }
   void setpixel(mywindow::pixel * px,int x,int y){
-    if(x<0 || y<0 || x>=500 || y>=600) return;
+    if(x<0 || y<0 || x>=600 || y>=500) return;
     buffer[x][y].R=px->R;
     buffer[x][y].G=px->G;
     buffer[x][y].B=px->B;
@@ -159,7 +162,7 @@ class boardcast{
     bufp->h=h;
     mywindow::pixel * pxl=&(bufp->data[0]);
     ppx=px;
-    while(pxl<endp || ppx<end){
+    while(pxl<endp && ppx<end){
       pxl->R=ppx->R;
       pxl->G=ppx->G;
       pxl->B=ppx->B;
@@ -168,8 +171,39 @@ class boardcast{
     }
     write(fd,bufp,4096);
   }
+  void sendall(){
+    int ix,iy;
+    char buf[4096];
+    void * endp=&(buf[4096]);
+    connection::netPack * bufp=(connection::netPack*)buf;
+    mywindow::pixel * pxl;
+    for(iy=0;iy<(500/2);iy++){
+      pxl=&(bufp->data[0]);
+      bufp->x=0;
+      bufp->y=iy*2;
+      bufp->w=600;
+      bufp->h=2;
+      for(ix=0;ix<600;ix++){
+        //line:iy*2
+        pxl->R=buffer[ix][iy*2].R;
+        pxl->G=buffer[ix][iy*2].G;
+        pxl->B=buffer[ix][iy*2].B;
+        pxl++;
+      }
+      for(ix=0;ix<600;ix++){
+        //line:iy*2+1
+        pxl->R=buffer[ix][iy*2+1].R;
+        pxl->G=buffer[ix][iy*2+1].G;
+        pxl->B=buffer[ix][iy*2+1].B;
+        pxl++;
+      }
+      write(fd,bufp,4096);
+    }
+  }
 };
 int main(){
+  system("killall -10 YRSSF");
   conn.autoresolv();
+  system("killall -12 YRSSF");
   return 0;
 }
