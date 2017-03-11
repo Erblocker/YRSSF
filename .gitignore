@@ -4,6 +4,7 @@
 *.a
 *.out
 *.hex
+*.lock
 YRSSF
 /core/lwan/build/*
 /core/leveldb/out-shared/*

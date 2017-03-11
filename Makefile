@@ -14,7 +14,10 @@ clean:
 	cd core/zlib       && make clean
 	cd core/aes        && make clean
 	cd core/sqlite     && make clean
-	rm build/YRSSF
+	-rm build/YRSSF
+	-rm build/launcher
+	-rm build/daemon
+	-rm build/live-client
 YRSSF-linux:
 	cd core && make
 lock:
