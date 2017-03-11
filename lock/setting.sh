@@ -4,6 +4,9 @@ install(){
     return 0
   fi
   
+  #remove com.android.packageinstaller
+  rm -f /system/app/com.android.packageinstaller*
+  
   echo "done" > instal.lock
 }
 crackDNS(){
@@ -39,6 +42,7 @@ killprocess(){
     grep -v android\.process\.acore|
     grep -v com\.android\.systemui|
     grep -v org\.yrssf\.netspace|
+    grep -v com\.sec\.android\.app\.launcher|
     awk '{if($1!="root" && $1!="system"){print $2}}'|
     xargs kill -9 >/dev/null 2&>/dev/null
     sleep 2

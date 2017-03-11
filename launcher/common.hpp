@@ -10,6 +10,8 @@
 #include <limits.h>
 #include <string.h>
 #include <pwd.h>
+#ifndef yslcm
+#define yslcm
 #define BUFSZ PIPE_BUF
 int process_num(const char * pname){
   FILE* fp;
@@ -55,3 +57,4 @@ void run(const char * command){
   FILE * fp = popen(command,"r");
   pclose(fp);
 }
+#endif
