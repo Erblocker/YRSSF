@@ -2496,6 +2496,19 @@ class API{
       libs.open(lua_tostring(L,1));
       return 0;
     });
+    lua_register(L,"canQuery",[](lua_State * L){
+      if(clientdisabled){
+        lua_pushboolean(L,0);
+        return 1;
+      }
+      if(clientlocker.try_lock()){
+        clientlocker.unlock();
+        lua_pushboolean(L,1);
+      }else{
+        lua_pushboolean(L,0);
+      }
+      return 1;
+    });
     lua_register(L,"updatekey",[](lua_State * L){
       if(clientdisabled)return 0;
       clientlocker.lock();

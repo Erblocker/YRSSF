@@ -7,7 +7,7 @@ int main(){
   }
   if(access("lock",F_OK)==0){
     if(!(process_num("lock")>1))
-      system("./lock &");
+      system("su -c \"./lock\" &");
     lockmode=1;
   }
   while(1){
