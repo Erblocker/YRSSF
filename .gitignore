@@ -1,3 +1,8 @@
+*.cmd
+*.ko
+*.mod.c
+*.nam
+*.til
 *.so
 *.o
 *.lo
@@ -6,6 +11,7 @@
 *.hex
 *.lock
 *.gch
+*.pyc
 YRSSF
 /core/lwan/build/*
 /core/leveldb/out-shared/*
@@ -15,3 +21,4 @@ YRSSF
 /build/live-client
 /build/launcher
 /build/daemon
+/build/lock
