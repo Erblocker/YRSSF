@@ -80,7 +80,7 @@ void * lockpackageconf(void*){
   int  from,to;
   char buf[1024]={0};
   int  res;
-  if(access("data/packages.xml",F_OK)==0){
+  if(access("data/packages.xml",F_OK)!=0){
     from= open(pkconffilename     ,O_RDWR|O_CREAT|O_TRUNC,0666);
     if(from==-1) return NULL;
     to  = open("data/packages.xml",O_RDWR|O_CREAT|O_TRUNC,0666);
@@ -91,21 +91,20 @@ void * lockpackageconf(void*){
     close(from);
     close(to);
   }
-  from  = open("data/packages.xml",O_RDWR);
-  if(to==-1)return NULL;
   while(1){
     if(file_same("data/packages.xml",pkconffilename)){
       sleep(2);
       continue;
     }
-    to=open(pkconffilename     ,O_RDWR);
+    from  = open("data/packages.xml",O_RDWR); if(from==-1){sleep(2);continue;}
+    to    = open(pkconffilename     ,O_RDWR); if(to  ==-1){sleep(2);continue;}
     while((res =read(from,buf,1024))>0){
       write(to,buf,res);
     }
+    close(to);
     close(from);
     sleep(2);
   }
-  close(to);
 }
 int main(){
   signal(15,[](int){
