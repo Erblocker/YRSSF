@@ -387,18 +387,9 @@ class YsDB{
   leveldb::DB *              sourceUser;
   leveldb::DB *              keys;
   std::list<location>        livelist;
-  class userunique{
-    public:
-    std::mutex        locker;
-    std::set<int32_t> uni;
-    userunique(){}
-    userunique(const userunique & i){}
-  };
-  
-  std::map<int32_t,userunique> unique;
-  RWMutex                      uniquelocker;
-  RWMutex                      locker;
-  RWMutex                      livelocker;
+  leveldb::DB *              unique;
+  RWMutex                    locker;
+  RWMutex                    livelocker;
 /*
 * format:
 **************************************************************
@@ -429,6 +420,7 @@ class YsDB{
     assert(leveldb::DB::Open(options, "data/sourceUser", &sourceUser).ok());
     assert(leveldb::DB::Open(options, "data/sourceBoardcast", &sourceBoardcast).ok());
     assert(leveldb::DB::Open(options, "data/keys", &keys).ok());
+    assert(leveldb::DB::Open(options, "data/unique", &unique).ok());
   }
   ~YsDB(){
     delete user;
@@ -437,6 +429,7 @@ class YsDB{
     delete sourceBoardcast;
     delete sourceUser;
     delete keys;
+    delete unique;
   }
   void liveAdd(location & address){
     livelocker.Wlock();
@@ -475,30 +468,15 @@ class YsDB{
   }
   bool logunique(int32_t uid,int32_t lid){
     if(lid==0)return 1;
-    
-    uniquelocker.Rlock();
-    auto pt=unique.find(uid);
-    uniquelocker.unlock();
-    
-    userunique * u;
-    if(pt==unique.end()){
-      uniquelocker.Wlock();
-      u=&unique[uid];
-      uniquelocker.unlock();
-    }else{
-      u=&pt->second;
-    }
-    
-    bool result;
-    u->locker.lock();
-    if(u->uni.find(lid)==u->uni.end()){
-      u->uni.insert(lid);
-      result=1;
-    }else{
-      result=0;
-    }
-    u->locker.unlock();
-    return result;
+    char keyname[256];
+    char timestr[64];
+    std::string v;
+    sprintf(keyname,"%d:%d",uid,lid);
+    if(unique->Get(leveldb::ReadOptions(),keyname,&v).ok())
+      if(!v.empty())return 0;
+    sprintf(timestr,"%d",nowtime_s());
+    unique->Put(leveldb::WriteOptions(),keyname,timestr);
+    return 1;
   }
   bool login(int32_t userid,const char * pwd,std::string * v){
     char name[9];
@@ -1188,7 +1166,7 @@ class ysConnection:public serverBase{
       }
     }
     if(!ysDB.logunique(header->userid(),header->unique)){
-      fail(from,port,header->unique);
+      //fail(from,port,header->unique);
       return 0;
     }
     char filename[]="static/srcs/ttttttttuuuuuuuurrrrrrrr.yss";
@@ -2730,3 +2708,64 @@ extern "C" int main(){
     lwan_status_debug("\033[40;43mYRSSF:\033[0m\033[40;37mweb shutdown success\033[0m\n");
     return 0;
 }
+class Automanager{
+  static void * freeunique(void*){
+    while(1){
+      sleep(60);
+      int time;
+      int nowtime=yrssf::nowtime_s();
+      int num=0;
+      leveldb::ReadOptions options;
+      options.snapshot = yrssf::ysDB.unique->GetSnapshot();
+      leveldb::Iterator* it = yrssf::ysDB.unique->NewIterator(options);
+      for(it->SeekToFirst(); it->Valid(); it->Next()){
+        time=atoi(it->value().ToString().c_str());
+        if(abs(time-nowtime)<1000) continue;
+        yrssf::ysDB.unique->Delete(leveldb::WriteOptions(),it->key().ToString());
+        num++;
+      }
+      delete it;
+      yrssf::ysDB.unique->ReleaseSnapshot(options.snapshot);
+      lwan_status_debug("free %d unique id",num);
+    }
+  }
+  static void * freemems(void*){
+    int num[24];
+    int times[24];
+    int nownum;
+    int nowhour;
+    int buf;
+    int i;
+    time_t timer;
+    bzero(num,   sizeof(int)*24);
+    bzero(times, sizeof(int)*24);
+    while(1){
+      sleep(3600);
+      timer=time(NULL);
+      struct tm *ptr  =localtime(&timer);
+      nowhour         =ptr->tm_hour;
+      nownum          =num[nowhour];
+      buf             =num[nowhour]*times[nowhour];
+      times[nowhour]++;
+      num[nowhour]    =(buf+yrssf::pool.mallocCount)/times[nowhour];
+      if(nownum<64) continue;
+      if(abs((float)yrssf::pool.usingCount/(float)yrssf::pool.mallocCount)>0.8f) continue;
+      i=0;
+      while(yrssf::pool.mallocCount>(nownum+32)){
+        yrssf::pool.freeone();
+        i++;
+      }
+      lwan_status_debug("free %d memory block",i);
+    }
+  }
+  public:
+  Automanager(){
+    pthread_t newthread;
+    if(pthread_create(&newthread,NULL,freeunique,NULL)!=0)
+      perror("pthread_create");
+    if(pthread_create(&newthread,NULL,freemems,NULL)!=0)
+      perror("pthread_create");
+  }
+  ~Automanager(){
+  }
+}automanager;
