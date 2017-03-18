@@ -129,10 +129,16 @@ class connection{
 }conn;
 class boardcast{
   int fd;
+  shot::shot shotbuf;
   public:
+  int resizex,resizey;
   mywindow::pixel buffer[600][500];
-  boardcast(){
+  boardcast():shotbuf("/dev/fb0"),resizex(1),resizey(1){
     fd=open(serverpipe,O_WRONLY);
+    printf("shot init begin\n");
+    resizex=shotbuf.fb_var_info.xres/600;
+    resizey=shotbuf.fb_var_info.yres/500;
+    printf("shot init end\n");
   }
   ~boardcast(){
     close(fd);
@@ -177,6 +183,7 @@ class boardcast{
     void * endp=&(buf[4096]);
     connection::netPack * bufp=(connection::netPack*)buf;
     mywindow::pixel * pxl;
+    //printf("send a chunk\n");
     for(iy=0;iy<(500/2);iy++){
       pxl=&(bufp->data[0]);
       bufp->x=0;
@@ -200,10 +207,46 @@ class boardcast{
       write(fd,bufp,4096);
     }
   }
+  void sendshot(){
+    shotbuf.readbuffer();
+    shot::rgb565 * pix;
+    int r,g,b;
+    //printf("send a frame\n");
+    for(int ix=0;ix<600;ix++)
+    for(int iy=0;iy<500;iy++){
+      pix=shotbuf.getpix(ix*resizex,iy*resizey);
+      if(pix==NULL){
+        pix->torgb(&r,&g,&b);
+        buffer[ix][iy].R=r;
+        buffer[ix][iy].G=g;
+        buffer[ix][iy].B=b;
+      }
+    }
+    sendall();
+  }
 };
-int main(){
+void clientmode(){
   system("killall -10 YRSSF");
   conn.autoresolv();
   system("killall -12 YRSSF");
+}
+void servermode(){
+  boardcast bc;
+  SDL_Event myEvent;
+  while(1){
+    SDL_PollEvent(&myEvent);
+    if(myEvent.type==SDL_QUIT)break;
+    bc.sendshot();
+    usleep(200);
+  }
+}
+int main(int argn,char ** argv){
+  if(argn>=2){
+    if(argv[1][0]=='s'){
+      servermode();
+      return 0;
+    }
+  }
+  clientmode();
   return 0;
 }

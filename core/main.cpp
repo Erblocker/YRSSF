@@ -1594,7 +1594,7 @@ class require{
       next=NULL;
     }
     ~require(){
-      lwan_status_debug("free a block");
+      //lwan_status_debug("free a block");
       if(next) delete next;
     }
 };
@@ -2203,7 +2203,7 @@ static void * liveserver_cb(void * arg){
   auto req=(require*)arg;
   auto bufm=(netSource*)(req->buffer);
   client.live(bufm);
-  lwan_status_debug("live size=%d",bufm->size());
+  //lwan_status_debug("live size=%d",bufm->size());
   pool.del(req);
 }
 require *  liveserverreq;
@@ -2218,8 +2218,10 @@ static void * liveserver(void *){
     lwan_status_debug("live begin");
     while(len=read(lfd,buf,SOURCE_CHUNK_SIZE)){
       bufm->size=len;
-      if(pthread_create(&newthread,NULL,liveserver_cb,liveserverreq)!=0)
-        perror("pthread_create");
+      if(pthread_create(&newthread,NULL,liveserver_cb,liveserverreq)!=0){
+        //perror("pthread_create");
+        liveserver_cb(liveserverreq);
+      }
       liveserverreq=pool.get();
       bufm=(netSource*)(liveserverreq->buffer);
       buf=bufm->source;
