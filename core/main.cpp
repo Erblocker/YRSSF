@@ -75,6 +75,8 @@ extern "C" {
 #include <sys/prctl.h>
 #include <dlfcn.h>
 #include <sqlite3.h>
+#include <linux/fb.h>
+#include <sys/ioctl.h>
 namespace yrssf{
 //////////////////////////////////
 const char defaultUserInfo[]="1234567890abcdef1234567890abcdef1234567890abcdef";
@@ -2230,6 +2232,175 @@ static void * liveserver(void *){
     close(lfd);
   }
 }
+namespace videolive{
+  struct rgb565{
+    unsigned short int pix565;
+    void torgb(int * r,int * g,int * b){
+      *r = ((pix565)>>11)&0x1f;
+      *g = ((pix565)>>5)&0x3f;
+      *b = (pix565)&0x1f;
+    }
+  };
+  class shot{
+    int fd;
+    public:
+    rgb565 * data;
+    struct fb_var_screeninfo fb_var_info;
+    struct fb_fix_screeninfo fb_fix_info;
+    int buffer_size;
+    shot(const char * path){
+      fd = open(path, O_RDONLY);
+      if(fd < 0){
+      printf("can not open dev\n");
+        exit(1);
+      }
+      // 获取LCD的可变参数
+      ioctl(fd, FBIOGET_VSCREENINFO, &fb_var_info);
+      // 一个像素多少位    
+      printf("bits_per_pixel: %d\n", fb_var_info.bits_per_pixel);
+      // x分辨率
+      printf("xres: %d\n", fb_var_info.xres);
+      // y分辨率
+      printf("yres: %d\n", fb_var_info.yres);
+      // r分量长度(bit)
+      printf("red_length: %d\n", fb_var_info.red.length);
+      // g分量长度(bit)
+      printf("green_length: %d\n", fb_var_info.green.length);
+      // b分量长度(bit)
+      printf("blue_length: %d\n", fb_var_info.blue.length);
+      // t(透明度)分量长度(bit)
+      printf("transp_length: %d\n", fb_var_info.transp.length);
+      // r分量偏移
+      printf("red_offset: %d\n", fb_var_info.red.offset);
+      // g分量偏移
+      printf("green_offset: %d\n", fb_var_info.green.offset);
+      // b分量偏移
+      printf("blue_offset: %d\n", fb_var_info.blue.offset);
+      // t分量偏移
+      printf("transp_offset: %d\n", fb_var_info.transp.offset);
+
+      // 获取LCD的固定参数
+      ioctl(fd, FBIOGET_FSCREENINFO, &fb_fix_info);
+      // 一帧大小
+      printf("smem_len: %d\n", fb_fix_info.smem_len);
+      // 一行大小
+      printf("line_length: %d\n", fb_fix_info.line_length);
+      // 一帧大小
+      buffer_size = (fb_var_info.xres * fb_var_info.yres * fb_var_info.bits_per_pixel / 8);
+      data = (rgb565 *)malloc(buffer_size);
+    }
+    ~shot(){
+      if(fd>=0)close(fd);
+      free(data);
+    }
+    int readbuffer(){
+      return read(fd, data, buffer_size);
+    }
+    rgb565 * getpix(int x,int y){
+      if(x<0 || y<0 || x>fb_var_info.xres || y>fb_var_info.yres) return NULL;
+      return &data[x+y*fb_var_info.xres];
+    }
+  };
+  struct pixel{
+    uint8_t R,G,B;
+    pixel(){}
+    pixel(uint8_t r,uint8_t g,uint8_t b){
+      R=r;
+      G=g;
+      B=b;
+    }
+  };
+  struct netPack{
+    char m;
+    nint32 x,y,w,h;
+    pixel data[];
+  };
+  class boardcast{
+    shot shotbuf;
+    public:
+    float resizex,resizey;
+    pixel buffer[600][500];
+    boardcast(const char * path):shotbuf(path),resizex(1),resizey(1){
+      resizex=shotbuf.fb_var_info.xres/600.0f;
+      resizey=shotbuf.fb_var_info.yres/500.0f;
+    }
+    ~boardcast(){
+    }
+    void setpixel(pixel * px,int x,int y){
+      if(x<0 || y<0 || x>=600 || y>=500) return;
+      buffer[x][y].R=px->R;
+      buffer[x][y].G=px->G;
+      buffer[x][y].B=px->B;
+    }
+    void sendall(){
+      int ix,iy;
+      netSource nbuf;
+      char * buf=nbuf.source;
+      nbuf.size=SOURCE_CHUNK_SIZE;
+      void * endp=&(buf[SOURCE_CHUNK_SIZE]);
+      netPack * bufp=(netPack*)buf;
+      pixel * pxl;
+      //printf("send a chunk\n");
+      for(iy=0;iy<(500/2);iy++){
+        pxl=&(bufp->data[0]);
+        bufp->x=0;
+        bufp->y=iy*2;
+        bufp->w=600;
+        bufp->h=2;
+        for(ix=0;ix<600;ix++){
+          //line:iy*2
+          pxl->R=buffer[ix][iy*2].R;
+          pxl->G=buffer[ix][iy*2].G;
+          pxl->B=buffer[ix][iy*2].B;
+          pxl++;
+        }
+        client.live(&nbuf);
+        for(ix=0;ix<600;ix++){
+          //line:iy*2+1
+          pxl->R=buffer[ix][iy*2+1].R;
+          pxl->G=buffer[ix][iy*2+1].G;
+          pxl->B=buffer[ix][iy*2+1].B;
+          pxl++;
+        }
+        client.live(&nbuf);
+      }
+    }
+    void sendshot(){
+      shotbuf.readbuffer();
+      rgb565 * pix;
+      int r,g,b;
+      //printf("send a frame\n");
+      for(int ix=0;ix<600;ix++)
+      for(int iy=0;iy<500;iy++){
+        pix=shotbuf.getpix(ix*resizex,iy*resizey);
+        if(pix==NULL){
+          pix->torgb(&r,&g,&b);
+          buffer[ix][iy].R=r;
+          buffer[ix][iy].G=g;
+          buffer[ix][iy].B=b;
+        }
+      }
+      sendall();
+    }
+  };
+  class live_f{
+    boardcast * bd;
+    public:
+    live_f(){
+      bd=NULL;
+    }
+    ~live_f(){
+      if(bd)delete bd;
+    }
+    void init(const char * path){
+      bd=new boardcast(path);
+    }
+    void sendall(){
+      if(!bd)return;
+      bd->sendall();
+    }
+  }screen;
+}
 class API{
   int shmid;
   public:
@@ -2474,6 +2645,14 @@ class API{
     lua_register(L,"loadsharedlibs",[](lua_State * L){
       if(!lua_isstring(L,1))return 0;
       libs.open(lua_tostring(L,1));
+      return 0;
+    });
+    lua_register(L,"boardcastScreenInit",[](lua_State * L){
+      if(!lua_isstring(L,1))return 0;
+      videolive::screen.init(lua_tostring(L,1));
+    });
+    lua_register(L,"boardcastScreen",[](lua_State * L){
+      videolive::screen.sendall();
       return 0;
     });
     lua_register(L,"canQuery",[](lua_State * L){
