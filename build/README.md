@@ -28,9 +28,13 @@
 ### updatekey
 ### cryptModeOn
 ### cryptModeOff
+### allowShell
+### disallowShell
 ## 网络相关
 ### boardcastScreenInit
 ### boardcastScreen
+### boardcastScreenDestory
+### screenShot
 ### liveadd
 ### liveclean
 ### liveModeOn

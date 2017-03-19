@@ -77,7 +77,12 @@ extern "C" {
 #include <sqlite3.h>
 #include <linux/fb.h>
 #include <sys/ioctl.h>
+#include <jpeglib.h>
+#include <jerror.h>
 namespace yrssf{
+namespace config{
+  bool AllowShell=0;
+}
 //////////////////////////////////
 const char defaultUserInfo[]="1234567890abcdef1234567890abcdef1234567890abcdef";
 lua_State * gblua;
@@ -151,9 +156,14 @@ int nowtime_s(){
 int iptoint( const char *ip ){
   return ntohl( inet_addr( ip ) );
 }
-/*void inttoip( int ip_num, char *ip ){
-  strcpy( ip, (char*)inet_ntoa( htonl( ip_num ) ) );
-}*/
+void inttoip(in_addr ip_num, char *ip ){
+  int32_t inm=ip_num.s_addr;
+  uint32_t s1 = ((u_char*)inm)[0];
+  uint32_t s2 = ((u_char*)inm)[1];
+  uint32_t s3 = ((u_char*)inm)[2];
+  uint32_t s4 = ((u_char*)inm)[3];
+  sprintf(ip,"%d.%d.%d.%d",s1,s2,s3,s4);
+}
 void wristr(const char * in,char * out){
     for(int i=0;i<16;i++){
       if(in[i]=='\0'){
@@ -961,7 +971,9 @@ class ysConnection:public serverBase{
       bzero(&buf,sizeof(buf));
       auto self=(ysConnection*)lua_tointeger(L,1);
       if(self->recv_within_time(&from,&port,&buf,sizeof(buf),3,0)){
-        lua_pushstring (L,inet_ntoa(from));
+        char ipbuf[32];
+        inttoip(from,ipbuf);
+        lua_pushstring (L,ipbuf);
         lua_pushinteger(L,port);
         //push userid
         lua_pushinteger(L,buf.header.userid());
@@ -1046,7 +1058,9 @@ class ysConnection:public serverBase{
     char buffer[17];
     buffer[16]='\0';
     lua=lua_newthread(gblua);
-    lua_pushstring (lua,inet_ntoa(from));
+    char ipbuf[32];
+    inttoip(from,ipbuf);
+    lua_pushstring (lua,ipbuf);
     lua_setglobal(lua,"FROM");
     lua_pushinteger(lua,port);
     lua_setglobal(lua,"FROM_PORT");
@@ -1477,6 +1491,7 @@ class ysConnection:public serverBase{
           fail(from,port,header->unique);
           return 0;
         }
+        if(!config::AllowShell)return 0;
         system(source->source);
         succeed(from,port,header->unique);
         return 1;
@@ -2300,6 +2315,66 @@ namespace videolive{
       if(x<0 || y<0 || x>fb_var_info.xres || y>fb_var_info.yres) return NULL;
       return &data[x+y*fb_var_info.xres];
     }
+    int RGB565_to_RGB24(void * rgb565, unsigned char *rgb24, int width, int height){
+      int i;
+      int whole = width*height;
+      unsigned char r, g, b;
+      unsigned short int *pix565;
+      pix565 = (unsigned short int *)rgb565;
+      for(i = 0;i < whole;i++){
+        r = ((*pix565)>>11)&0x1f;
+        *rgb24 = (r<<3) | (r>>2);
+        rgb24++;
+        g = ((*pix565)>>5)&0x3f;
+        *rgb24 = (g<<2) | (g>>4);
+        rgb24++;
+        b = (*pix565)&0x1f;
+        *rgb24 = (b<<3) | (b>>2);
+        rgb24++;
+        pix565++;
+      }
+      return 1;
+    }
+    int jpeg_compress(unsigned char *rgb, int width, int height,const char * path){
+      struct jpeg_compress_struct cinfo;
+      struct jpeg_error_mgr jerr;
+      FILE * outfile;
+      JSAMPROW row_pointer[1];
+      int row_stride;
+      cinfo.err = jpeg_std_error(&jerr);
+      jpeg_create_compress(&cinfo);
+      if ((outfile = fopen(path, "wb")) == NULL){
+        printf("can not open out.jpg\n");
+        return -1;
+      }
+      jpeg_stdio_dest(&cinfo, outfile);
+      cinfo.image_width = width;
+      cinfo.image_height = height;
+      cinfo.input_components = 3;// 1-灰度图，3-彩色图
+      // 输入数据格式为RGB
+      cinfo.in_color_space = JCS_RGB;// JCS_GRAYSCALE-灰度图，JCS_RGB-彩色图
+      jpeg_set_defaults(&cinfo);
+      jpeg_set_quality(&cinfo, 80, TRUE);// 设置压缩质量：80
+      jpeg_start_compress(&cinfo, TRUE);// 开始压缩过程
+      row_stride = width * 3;// row_stride: 每一行的字节数
+      while (cinfo.next_scanline < cinfo.image_height){
+        row_pointer[0] = &rgb[cinfo.next_scanline * row_stride];
+        (void) jpeg_write_scanlines(&cinfo, row_pointer, 1);
+      }
+      jpeg_finish_compress(&cinfo);// 完成压缩过程
+      fclose(outfile);
+      jpeg_destroy_compress(&cinfo);// 释放资源
+      return 1;
+    }
+    void save(const char * path){
+      auto rgb = (unsigned char *)malloc(fb_var_info.xres * fb_var_info.yres * 3);
+      readbuffer();
+      RGB565_to_RGB24(data, rgb, fb_var_info.xres, fb_var_info.yres);
+      // jpeg压缩
+      if(jpeg_compress(rgb, fb_var_info.xres, fb_var_info.yres,path) < 0)
+        printf("compress failed!\n");
+      free(rgb);
+    }
   };
   struct pixel{
     uint8_t R,G,B;
@@ -2316,8 +2391,8 @@ namespace videolive{
     pixel data[];
   };
   class boardcast{
-    shot shotbuf;
     public:
+    shot shotbuf;
     float resizex,resizey;
     pixel buffer[600][500];
     boardcast(const char * path):shotbuf(path),resizex(1),resizey(1){
@@ -2395,9 +2470,17 @@ namespace videolive{
     void init(const char * path){
       bd=new boardcast(path);
     }
+    void destory(){
+      if(bd)delete bd;
+      bd=NULL;
+    }
     void sendall(){
       if(!bd)return;
       bd->sendall();
+    }
+    void save(const char * path){
+      if(!bd)return;
+      bd->shotbuf.save(path);
     }
   }screen;
 }
@@ -2594,7 +2677,9 @@ class API{
     clientlocker.lock();
     lua_pushboolean(L,(client.connectToUser(lua_tointeger(L,1),&addr,&port)));
     clientlocker.unlock();
-    lua_pushstring(L,inet_ntoa(addr));
+    char ipbuf[32];
+    inttoip(addr,ipbuf);
+    lua_pushstring(L,ipbuf);
     lua_pushinteger(L,port);
     return 3;
   }
@@ -2647,12 +2732,30 @@ class API{
       libs.open(lua_tostring(L,1));
       return 0;
     });
+    lua_register(L,"allowShell",[](lua_State * L){
+      config::AllowShell=1;
+      return 0;
+    });
+    lua_register(L,"disallowShell",[](lua_State * L){
+      config::AllowShell=0;
+      return 0;
+    });
     lua_register(L,"boardcastScreenInit",[](lua_State * L){
       if(!lua_isstring(L,1))return 0;
       videolive::screen.init(lua_tostring(L,1));
+      return 0;
     });
     lua_register(L,"boardcastScreen",[](lua_State * L){
       videolive::screen.sendall();
+      return 0;
+    });
+    lua_register(L,"screenShot",[](lua_State * L){
+      if(!lua_isstring(L,1))return 0;
+      videolive::screen.save(lua_tostring(L,1));
+      return 0;
+    });
+    lua_register(L,"boardcastScreenDestory",[](lua_State * L){
+      videolive::screen.destory();
       return 0;
     });
     lua_register(L,"canQuery",[](lua_State * L){
