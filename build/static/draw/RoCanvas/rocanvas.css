@@ -1,0 +1,14 @@
+.roCanvasColorPicker
+{
+    border:1px solid black;    
+    text-decoration:none;
+    display:block;
+    float:left;
+    width:25px;
+    height:25px;
+    margin-left:3px;
+}
+
+canvas{
+	touch-action: none; //For IE10+ and future browsers supporting touch-action property
+}

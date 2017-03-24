@@ -1,0 +1,7 @@
+--What Is RoCanvas.js --
+
+A small and easy to embed javascript class for creating interactive drawing boards on your page. Add it to your site and let your visitors draw anything they want. With some server-side programming you can save their drawings to the server, create galleries, contests, let them draw their avatars, or create a cool lovely site like http://drawapig.desktopcreatures.com/.
+
+Full documentation at http://re.trotoys.com/article/rocanvas/
+
+Live demo at http://re.trotoys.com/rocanvas/rocanvas.html

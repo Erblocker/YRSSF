@@ -2429,7 +2429,6 @@ namespace videolive{
           pxl->B=buffer[ix][iy*2].B;
           pxl++;
         }
-        client.live(&nbuf);
         for(ix=0;ix<600;ix++){
           //line:iy*2+1
           pxl->R=buffer[ix][iy*2+1].R;
@@ -2897,6 +2896,21 @@ static lwan_http_status_t ajax(lwan_request_t *request,lwan_response_t *response
     headers[0].value = (char*)"no-cache";
     headers[1].key   = NULL;
     headers[1].value = NULL;
+    char buf[1025];
+    l=request->url.len>1024?1024:request->url.len;
+    for(i=0;i<l;i++){
+      buf[i]=request->url.value[i];
+    }
+    buf[i+1]='\0';
+    lua_pushstring(L,buf);
+    lua_setglobal(L,"URL");
+    l=request->original_url.len>1024?1024:request->original_url.len;
+    for(i=0;i<l;i++){
+      buf[i]=request->original_url.value[i];
+    }
+    buf[i+1]='\0';
+    lua_pushstring(L,buf);
+    lua_setglobal(L,"ORIGINAL_URL");
     const char * message;
     const static char Emessage[]="NULL";
     response->mime_type = "text/html;charset=utf-8";

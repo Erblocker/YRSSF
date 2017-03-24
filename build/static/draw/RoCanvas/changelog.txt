@@ -1,0 +1,13 @@
+Changes in version 1.4:
+
+Complete rework:
+1. Project changed to a Javascript class instead of HTML5 component
+2. Name changed to RoCanvas.js
+3. Added custom color selection
+
+
+Changes in version 1.2:
+
+1. RoCanvas can now draw filled circles and empty circles
+2. A bug is fixed so after clearing canvas the stroke width remains as selected
+3. Another bug after clearing canvas is fixed - the stroke keeps the default shape 

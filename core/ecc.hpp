@@ -2,6 +2,7 @@
 #define ys_ecc
 #include <stdlib.h>
 #include <math.h>
+#include <time.h>
 #include <climits>
 #include "primes.h"
 #define INT64_MAX  9223372036854775807
@@ -47,13 +48,22 @@ class ECC{
       }
       return a;
     }
+    static int64_t gcd(int32_t a,int32_t b){
+      return b?gcd(b,a%b):a;
+    }
     int64_t moddivision(int64_t a, int64_t b, int64_t c) {
+      a=a % b;
+      c=c % b;
+      a=a*gcd(c,b);
+      return (a,b);
+      /*
       a = mod(a,b);
       while(a%c != 0) {
         a += b;
       }
       a = a/c;
       return a;
+      */
     }
     Pare add(const Pare & pare){
       if(this->x == INT64_MAX) {//为无穷大时O+P=P
@@ -90,12 +100,35 @@ class ECC{
     Pare operator-(const Pare & p){
       return this->less(p);
     }
-    Pare multiply(int64_t num) {
+    Pare x2n(int64_t num){
       Pare p (*this);
-      for(int64_t i=1; i<num; i++) {
-        p = p.add(*this);
+      if(num<0){
+        p.x=0;
+        p.y=0;
+        return p;
+      }
+      for(int i=1;i<num;i++){
+        p=p+p;
       }
       return p;
+    }
+    Pare multiply(int64_t num) {
+      Pare p   (*this);
+      Pare ori (*this);
+      if(num<0){
+        p.x=0;
+        p.y=0;
+        return p;
+      }
+      ori.x=0;
+      ori.y=0;
+      for(int i=0;i<64;i++){
+        if(((num>>i)&1)==1){
+          //bit:63-i
+          ori=ori+this->x2n(i);
+        }
+      }
+      return ori;
     }
     Pare operator*(int64_t num){
       return this->multiply(num);
@@ -120,7 +153,7 @@ class ECC{
     st++;
     srand(st);
     r*=rand();
-    return r % max;
+    return abs(r % max);
   }
   static int64_t prime(){
     static int st=time(NULL);
@@ -132,9 +165,11 @@ class ECC{
   }
   ECC():e(prime(),random(1024),random(1024)),pare(&e),publickey(&e){
     privatekey = random(1024);//7位速度变慢 私钥--随机
+    //std::cout<<"k1:"<<privatekey<<std::endl;
     pare.x=random(100000000);
     pare.y=random(100000000);
     publickey = pare.multiply(privatekey);//new Pare();
+    //std::cout<<"k2"<<std::endl;
   }
   ECC(const E & el,int64_t kx,int64_t ky,int64_t px,int64_t py):e(el),pare(&e),publickey(&e){
     pare.x=px;
