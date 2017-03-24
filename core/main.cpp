@@ -2970,22 +2970,21 @@ void init_daemon(){
   return; 
 }
 extern "C" int main(){
-    lwan_url_map_t default_map[3];
-    bzero(default_map,sizeof(default_map));
-    default_map[0].prefix = "/ajax";
-    default_map[0].handler = ajax;
-    default_map[1].prefix = "/";
-    default_map[1].module = lwan_module_serve_files();
-    default_map[1].flags = (lwan_handler_flags_t)0;
-    struct lwan_serve_files_settings_t servefile;
-    default_map[1].args = &servefile;
-    bzero(&servefile,sizeof(servefile));
-    servefile.root_path                        = "static";
-    servefile.index_html                       = "index.html";
-    servefile.serve_precompressed_files        = true;
-    servefile.directory_list_template          = NULL;
-    servefile.auto_index                       = true;
-    default_map[2].prefix = NULL;
+    struct lwan_serve_files_settings_t sfile;
+    bzero(&sfile,sizeof(sfile));
+    sfile.root_path                        = "static";
+    sfile.index_html                       = "index.html";
+    sfile.serve_precompressed_files        = true;
+    sfile.directory_list_template          = NULL;
+    sfile.auto_index                       = true;
+    
+    lwan_url_map_t default_map[]={
+    //handler	data	prefix		len	flags				module				args		realm	password_file
+      ajax	,NULL	,"/ajax"	,0	,(lwan_handler_flags_t)0	,NULL				,NULL	,{	NULL	,NULL	},
+      NULL	,NULL	,"/"		,0	,(lwan_handler_flags_t)0	,lwan_module_serve_files()	,&sfile	,{	NULL	,NULL	},
+      NULL	,NULL	,NULL		,0	,(lwan_handler_flags_t)0	,NULL				,NULL	,{	NULL	,NULL	}
+    };
+    
     lwan_t l;
     lwan_init(&l);
     lwan_set_url_map(&l, default_map);
