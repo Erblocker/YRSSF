@@ -33,8 +33,8 @@ int sqlfilter(lua_State * L){
   }
   *sp2='\0';
   lua_pushstring(L,ostr);
-  return 1;
   free(ostr);
+  return 1;
 }
 void lua_open(lua_State * L){
   lua_register(L,"sqlfilter",sqlfilter);
