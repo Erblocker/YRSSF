@@ -124,8 +124,7 @@ class ECC{
       ori.y=0;
       for(int i=0;i<64;i++){
         if(((num>>i)&1)==1){
-          //bit:63-i
-          ori=ori+this->x2n(i);
+          ori=ori+this->x2n(i+1);
         }
       }
       return ori;
