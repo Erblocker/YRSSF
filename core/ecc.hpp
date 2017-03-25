@@ -41,7 +41,7 @@ class ECC{
       e=p.e;
       return *this;
     }
-    int64_t mod(int64_t a, int64_t b) {
+    static int64_t mod(int64_t a, int64_t b) {
       a = a%b;
       while(a<0) {
         a += b;
@@ -51,7 +51,7 @@ class ECC{
     static int64_t gcd(int32_t a,int32_t b){
       return b?gcd(b,a%b):a;
     }
-    int64_t moddivision(int64_t a, int64_t b, int64_t c) {
+    static int64_t moddivision(int64_t a, int64_t b, int64_t c) {
       a=a % b;
       c=c % b;
       a=a*gcd(c,b);
@@ -65,7 +65,7 @@ class ECC{
       return a;
       */
     }
-    Pare add(const Pare & pare){
+    Pare add(const Pare & pare)const{
       if(this->x == INT64_MAX) {//为无穷大时O+P=P
         return pare;
       }
@@ -89,18 +89,18 @@ class ECC{
       }
       return res;
     }
-    Pare operator+(const Pare & p){
+    Pare operator+(const Pare & p)const{
       return this->add(p);
     }
-    Pare less(const Pare & p) {
+    Pare less(const Pare & p)const{
       Pare b(p);
       b.y *= -1;
       return add(b);
     }
-    Pare operator-(const Pare & p){
+    Pare operator-(const Pare & p)const{
       return this->less(p);
     }
-    Pare x2n(int64_t num){
+    Pare x2n(int64_t num)const{
       Pare p (*this);
       if(num<0){
         p.x=0;
@@ -112,7 +112,7 @@ class ECC{
       }
       return p;
     }
-    Pare multiply(int64_t num) {
+    Pare multiply(int64_t num)const{
       Pare p   (*this);
       Pare ori (*this);
       if(num<0){
@@ -130,7 +130,7 @@ class ECC{
       }
       return ori;
     }
-    Pare operator*(int64_t num){
+    Pare operator*(int64_t num)const{
       return this->multiply(num);
     }
   };
@@ -177,13 +177,13 @@ class ECC{
     publickey.x=kx;
     publickey.y=ky;
   }
-  Message encryption(Pare & m) {
+  Message encryption(Pare & m)const{
     int64_t r    = random(1024);//随机数
     Pare c1   = m+(publickey*r);
     Pare c2   = pare*r;
     return Message(c1,c2);
   }
-  Pare decryption(Message &m) {
+  Pare decryption(Message &m)const{
     return m.c1-(m.c2*privatekey);
   }
   

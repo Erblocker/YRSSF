@@ -793,12 +793,12 @@ class ysConnection:public serverBase{
     mypassword[16]='\0';
     script="default.lua";
   }
-  void fileappend(char * n,char * data,int size){
+  void fileappend(const char * n,char * data,int size){
     FILE * f=fopen(n,"a");
     fwrite(data,size,1,f);
     fclose(f);
   }
-  void createfile(char *n){
+  void createfile(const char *n){
     FILE * f=fopen(n,"w");
     fclose(f);
   }
@@ -1238,19 +1238,31 @@ class ysConnection:public serverBase{
         //write database
         if(header->globalMode=='t'){
           if(userinfo.at(16)=='t'){
-            if(!ysDB.existSrc(query->str1))
-            if(ysDB.writeSrc(query->str1,filename)){
+            if(!ysDB.existSrc(query->str1)){
+              if(ysDB.writeSrc(query->str1,filename)){
+                succeed(from,port,header->unique);
+                createfile(filename);
+                return 1;
+              }
+            }else{
+              ysDB.readSrc(query->str1,&result);
+              createfile(result.c_str());
               succeed(from,port,header->unique);
-              createfile(filename);
               return 1;
             }
           }
         }else{
-          if(!ysDB.existSrc(query->str1,header->userid()))
-          if(ysDB.writeSrc(query->str1,header->userid(),filename)){
-            succeed(from,port,header->unique);
-            createfile(filename);
-            return 1;
+          if(!ysDB.existSrc(query->str1,header->userid())){
+            if(ysDB.writeSrc(query->str1,header->userid(),filename)){
+              succeed(from,port,header->unique);
+              createfile(filename);
+              return 1;
+            }
+          }else{
+              ysDB.readSrc(query->str1,header->userid(),&result);
+              createfile(result.c_str());
+              succeed(from,port,header->unique);
+              return 1;
           }
         }
         fail(from,port,header->unique);
@@ -2729,6 +2741,11 @@ class API{
     lua_register(L,"loadsharedlibs",[](lua_State * L){
       if(!lua_isstring(L,1))return 0;
       libs.open(lua_tostring(L,1));
+      return 0;
+    });
+    lua_register(L,"clientSrcInit",[](lua_State * L){
+      if(!lua_isstring(L,1))return 0;
+      client.newSrc(lua_tostring(L,1));
       return 0;
     });
     lua_register(L,"allowShell",[](lua_State * L){
