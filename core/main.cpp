@@ -490,6 +490,15 @@ class YsDB{
     unique->Put(leveldb::WriteOptions(),keyname,timestr);
     return 1;
   }
+  bool uniqueExist(int32_t uid,int32_t lid){
+    if(lid==0)return 0;
+    char keyname[256];
+    std::string v;
+    sprintf(keyname,"%d:%d",uid,lid);
+    if(unique->Get(leveldb::ReadOptions(),keyname,&v).ok())
+      if(!v.empty())return 1;
+    return 0;
+  }
   bool login(int32_t userid,const char * pwd,std::string * v){
     char name[9];
     const char * tp;
@@ -2743,6 +2752,18 @@ class API{
       libs.open(lua_tostring(L,1));
       return 0;
     });
+    lua_register(L,"logUnique",[](lua_State * L){
+      if(!lua_isinteger(L,1))return 0;
+      if(!lua_isinteger(L,2))return 0;
+      lua_pushboolean(L,ysDB.logunique(lua_tointeger(L,1),lua_tointeger(L,2)));
+      return 1;
+    });
+    lua_register(L,"uniqueExist",[](lua_State * L){
+      if(!lua_isinteger(L,1))return 0;
+      if(!lua_isinteger(L,2))return 0;
+      lua_pushboolean(L,ysDB.uniqueExist(lua_tointeger(L,1),lua_tointeger(L,2)));
+      return 1;
+    });
     lua_register(L,"clientSrcInit",[](lua_State * L){
       if(!lua_isstring(L,1))return 0;
       client.newSrc(lua_tostring(L,1));
@@ -2953,7 +2974,10 @@ static lwan_http_status_t ajax(lwan_request_t *request,lwan_response_t *response
       lua_settable(L, -3);
     }
     lua_setglobal(L,"COOKIE");
-    luaL_dofile(L,"ajax.lua");
+    luaL_dofile(L,"./ajax.lua");
+    if(lua_isstring(L,-1)){
+      std::cout<<lua_tostring(L,-1)<<std::endl;
+    }
     lua_getglobal(L,"RESULT");
     if(lua_isstring(L,-1)){
       message=lua_tostring(L,-1);

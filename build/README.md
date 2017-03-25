@@ -46,3 +46,5 @@
 ### canQuery
 ### setServerUser
 ### setClientUser
+### logUnique
+### uniqueExist
