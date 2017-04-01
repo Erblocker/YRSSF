@@ -26,18 +26,22 @@ int main(){
   cout<<o.x<<endl;
   cout<<o.y<<endl;
   cout<<"\n"<<endl;
-  msg.c1.x=11;
-  msg.c1.y=11;
-  msg.c2.x=11;
-  msg.c2.y=11;
-  m=ecc.decryption(msg);
-  msg=ecc.encryption(m);
-  cout<<(msg.c1.x)<<endl;
-  cout<<(msg.c1.y)<<endl;
-  cout<<(msg.c2.x)<<endl;
-  cout<<(msg.c2.y)<<endl;
-  cout<<m.x<<endl;
-  cout<<m.y<<endl;
-  cout<<"\n"<<endl;
+  
+  int64_t data=123456;
+  int64_t sign[2];
+  
+  cout<<"sign test"<<endl;
+  ecc.sign(data,sign);
+  if(ecc.check(data,sign))
+    cout<<"success"<<endl;
+  else
+    cout<<"fail"<<endl;
+  sign[0]=23377;
+  sign[1]=45566;
+  if(ecc.check(data,sign))
+    cout<<"success"<<endl;
+  else
+    cout<<"fail"<<endl;
+  
   return 0;
 }

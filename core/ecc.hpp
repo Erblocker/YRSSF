@@ -187,10 +187,10 @@ class ECC{
   }
   void sign(int64_t ei,int64_t * res)const{
     begin:
-    int64_t r=random(e.p);
-    if(r<1) goto begin;
-    Pare R(pare*r);
-    int64_t s=ei*Pare::mod(privatekey,e.p);
+    int64_t k=random(e.p);
+    Pare pp(pare*k);
+    int64_t r=Pare::mod(pp.x,e.p);
+    int64_t s=k-Pare::mod(ei*privatekey,e.p);
     if(r==0 || s==0)goto begin;
     res[0]=r;
     res[1]=s;
