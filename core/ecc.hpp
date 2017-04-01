@@ -24,8 +24,8 @@ class ECC{
   class Pare{
     public:
     int64_t x,y;
-    E  * e;
-    Pare(E * e){
+    const E  * e;
+    Pare(const E * e){
       x=0;
       y=0;
       this->e=e;
@@ -177,7 +177,7 @@ class ECC{
     publickey.y=ky;
   }
   Message encryption(Pare & m)const{
-    int64_t r    = random(1024);//随机数
+    int64_t r    = random(1000000);//随机数
     Pare c1   = m+(publickey*r);
     Pare c2   = pare*r;
     return Message(c1,c2);
@@ -185,6 +185,23 @@ class ECC{
   Pare decryption(Message &m)const{
     return m.c1-(m.c2*privatekey);
   }
-  
+  void sign(int64_t ei,int64_t * res)const{
+    begin:
+    int64_t r=random(e.p);
+    if(r<1) goto begin;
+    Pare R(pare*r);
+    int64_t s=ei*Pare::mod(privatekey,e.p);
+    if(r==0 || s==0)goto begin;
+    res[0]=r;
+    res[1]=s;
+  }
+  bool check(int64_t ei,int64_t * res)const{
+    if(res[0]>(e.p) || res[0]<1)return 0;
+    if(res[1]>(e.p) || res[1]<1)return 0;
+    Pare pp(pare*res[1]+publickey*ei);
+    int64_t r1=Pare::mod(pp.x,e.p);
+    if(r1==Pare::mod(res[0],e.p))return 1;
+    return 0;
+  }
 };
 #endif

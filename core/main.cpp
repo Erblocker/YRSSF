@@ -290,6 +290,8 @@ class Key:public ECC{
     nint64 p,a,b;
     nint64 kx,ky,px,py;
     char key[32];
+    nint64 signr;
+    nint64 sings;
   }*buf;
   char key[16];
   void setkey(){
@@ -1743,6 +1745,33 @@ class Client:public Server{
     script="client.lua";
     liveclientrunning=0;
   }
+  template<typename T1,typename T2>
+  bool query(T1 * qypk,T2 * buf){
+    int      i;
+    in_addr  from;
+    short    port;
+    
+    int rdn=randnum();
+    qypk->header.unique=rdn;
+    
+    bzero(buf ,sizeof(T2));
+    if(iscrypt)crypt_encode(qypk,&key);
+    for(i=0;i<10;i++){
+      send(parIP,parPort,qypk,sizeof(T1));
+      loop1:
+      if(recv_within_time(&from,&port,buf,sizeof(T2),1,0)){
+        if(from.s_addr==parIP.s_addr && port==parPort){
+          crypt_decode(&buf,&key);
+          
+          if(rdn!=qypk.header.unique) goto loop1;
+          return 1;
+        }
+        else
+          goto loop1;
+      }
+    }
+    return 0;
+  }
   void live(const char * data,uint32_t size){
     netSource qypk;
     uint32_t  len;
@@ -3058,7 +3087,7 @@ class Automanager{
       leveldb::Iterator* it = yrssf::ysDB.unique->NewIterator(options);
       for(it->SeekToFirst(); it->Valid(); it->Next()){
         time=atoi(it->value().ToString().c_str());
-        if(abs(time-nowtime)<1000) continue;
+        if(abs(time-nowtime)<300) continue;
         yrssf::ysDB.unique->Delete(leveldb::WriteOptions(),it->key().ToString());
         num++;
       }

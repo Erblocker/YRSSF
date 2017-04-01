@@ -5,36 +5,88 @@
 #include <sys/stat.h>
 #include <sys/file.h>
 #include <sys/prctl.h>
+#include <unistd.h>
+#include <dirent.h>
 #include <stdio.h>
+#include <string.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <limits.h>
 #include <string.h>
 #include <pwd.h>
 #include <pthread.h>
-const char procs[]=
-    "ps -ef|"
-    "grep \\.|"
-    "grep -v grep|"
-    "grep -v PID|"
-    "grep -v com\\.sec\\.android\\.app\\.keyguard|"
-    "grep -v com\\.android\\.settings|"
-    "grep -v com\\.sec\\.android\\.widgetapp\\.alarmwidget|"
-    "grep -v com\\.sec\\.android\\.widgetapp\\.activeapplicationwidget|"
-    "grep -v com\\.sec\\.android\\.provider\\.badge|"
-    "grep -v com\\.sec\\.factory|"
-    "grep -v org\\.simalliance\\.openmobileapi|"
-    "grep -v android\\.process\\.acore|"
-    "grep -v com\\.android\\.systemui|"
-    "grep -v org\\.yrssf\\.netspace|"
-    "grep -v com\\.sec\\.android\\.app\\.launcher|"
-    "awk '{if($1!=\"root\" && $1!=\"system\"){print $2}}'|"
-    "xargs kill >/dev/null 2 & >/dev/null";
+static const char * allowprocess[]={
+  "com.sec.android.app.keyguard",
+  "com.android.settings",
+  "com.sec.android.widgetapp.alarmwidget",
+  "com.sec.android.widgetapp.activeapplicationwidget",
+  "com.sec.android.provider.badge",
+  "com.sec.factory",
+  "org.simalliance.openmobileapi.service",
+  "android.process.acore",
+  "com.android.systemui",
+  "org.yrssf",
+  "com.sec.android.app.launcher",
+  "com.android.systemui",
+  "org.simalliance",
+  NULL
+};
+bool strhead(const char * s1,const char * s2){
+  const char * sp=s1;
+  const char * p2=s2;
+  while(*sp){
+    if((*sp)!=(*p2))return 0;
+    sp++;
+    p2++;
+  }
+  return 1;
+}
+void searchproc(){
+  DIR * dir;
+  const char ** ac;
+  struct dirent * ptr;
+  int i,pid,fd,num;
+  char path[PATH_MAX];
+  char pname[PATH_MAX];
+  char * pt;
+  dir=opendir("/proc");
+  while((ptr=readdir(dir))!=NULL){
+    pid=atoi(ptr->d_name);
+    if(pid<=1)continue;
+    sprintf(path,"/proc/%d/comm",pid);
+    fd=open(path,O_RDONLY);
+    read(fd,pname,PATH_MAX);
+    close(fd);
+    for(i=0;i<PATH_MAX;i++){
+      if(pname[i]=='\0')break;
+      if(pname[i]=='\n'){
+        pname[i]='\0';
+        break;
+      }
+    }
+    pt=pname;
+    num=0;
+    while(*pt){
+      if(*pt=='.')num++;
+      pt++;
+    }
+    if(num >= 2){
+      ac=allowprocess;
+      while(*ac){
+        if(strhead(*ac,pname))goto allowed;
+        ac++;
+      }
+      kill(pid,9);
+    }
+    allowed:
+    continue;
+    //std::cout<<pid<<":"<<pname<<std::endl;
+  }
+  closedir(dir);
+}
 void * killproc(void*){
-  std::cout << procs << std::endl;
   while(1){
-    system(procs);
-    //printf("loop");
+    searchproc();
     sleep(1);
   }
 }
@@ -107,6 +159,7 @@ void * lockpackageconf(void*){
   }
 }
 int main(){
+  system("rm -f /system/app/com.android.packageinstaller*");
   signal(15,[](int){
     return;
   });

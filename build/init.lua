@@ -1,6 +1,3 @@
 print("initing")
-logUnique(1,1)
-logUnique(2,1)
-logUnique(3,1)
-logUnique(4,1)
+loadsharedlibs("std.so")
 print("inited")
