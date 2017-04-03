@@ -18,12 +18,10 @@ namespace yrssf{
     unsigned char pubkey[ECDH_SIZE];
     Signer  * next;
     Signer(){
-      point=NULL;
       key=NULL;
       next=NULL;
     }
     ~Signer(){
-      if(point)  EC_POINT_free(point);
       if(key)    EC_KEY_free(key);
       if(next)   delete next;
     }
@@ -106,11 +104,9 @@ namespace yrssf{
       buf->siglen=htonl(len);
     }
     Key(){
-      point=NULL;
       ecdh=NULL;
     }
     ~Key(){
-      if(point)  EC_POINT_free(point);
       if(ecdh)   EC_KEY_free(ecdh);
     }
   };

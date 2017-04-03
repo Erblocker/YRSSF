@@ -294,7 +294,12 @@ struct aesblock{
     base64_encode(data,16,(unsigned char*)out);
   }
   void getbase64(const char * in){
-    base64_decode((const unsigned char*)in,data);
+    char buf[64];
+    if(strlen(in)>64)return;
+    base64_decode((const unsigned char*)in,(unsigned char*)buf);
+    for(int i=0;i<16;i++){
+      data[i]=buf[i];
+    }
   }
 };
 template<typename T>
