@@ -58,6 +58,7 @@ extern "C" {
 }
 #include "rwmutex.hpp"
 #include "key.hpp"
+#include "base64.hpp"
 #include <cassert>
 #include <iostream>
 #include <stdio.h>
@@ -289,6 +290,12 @@ struct aesblock{
     for(int i=0;i<16;i++) data[i]=f.data[i];
     return *this;
   }
+  void tobase64(char * out)const{
+    base64_encode(data,16,(unsigned char*)out);
+  }
+  void getbase64(const char * in){
+    base64_decode((const unsigned char*)in,data);
+  }
 };
 template<typename T>
 void crypt_encode(T data,aesblock * key){
@@ -394,15 +401,14 @@ class YsDB{
     int2str(&uid,name);
     if(!keys->Get(leveldb::ReadOptions(),name,&v).ok())return 0;
     if(v.length()<16)return 0;
-    for(int i=0;i<16;i++) key->data[i]=v[i];
+    key->getbase64(v.c_str());
     return 1;
   }
   void setkey(int32_t uid,aesblock * key){
     char name[9];
     int2str(&uid,name);
-    char v[17];
-    for(int i=0;i<16;i++)v[i]=key->data[i];
-    v[16]='\0';
+    char v[32];
+    key->tobase64(v);
     keys->Put(leveldb::WriteOptions(),name,v);
   }
   bool logunique(int32_t uid,int32_t lid){
@@ -1148,6 +1154,7 @@ class ysConnection:public serverBase{
         
         for(i=0;i<16;i++) newkey.data[i]=senddata.shared[i];
         ysDB.setkey(header->userid(),&newkey);
+        
         respk.header.userid=myuserid;
         for(i=0;i<16;i++)
           respk.header.password[i]=mypassword[i];

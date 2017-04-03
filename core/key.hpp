@@ -16,14 +16,16 @@ namespace yrssf{
     EC_GROUP *group;
     public:
     unsigned char pubkey[ECDH_SIZE];
+    Signer  * next;
     Signer(){
       point=NULL;
       key=NULL;
-      printf("ECDH_SIZE:%d\n",ECDH_SIZE);
+      next=NULL;
     }
     ~Signer(){
       if(point)  EC_POINT_free(point);
       if(key)    EC_KEY_free(key);
+      if(next)   delete next;
     }
     bool init(){
       //Generate Public
@@ -38,7 +40,14 @@ namespace yrssf{
       return 1==ECDSA_sign(0,data,datalen,signature,sig_len,key);
     }
     bool check(unsigned char * data,unsigned int datalen,unsigned char * signature,unsigned int sig_len){
-      return 1==ECDSA_verify(0,data,20,signature,sig_len,key);
+      if(ECDSA_verify(0,data,20,signature,sig_len,key)==1){
+        return 1;
+      }else{
+        if(next)
+          return next->check(data,datalen,signature,sig_len);
+        else
+          return 0;
+      }
     }
   }signer;
   class Key{
