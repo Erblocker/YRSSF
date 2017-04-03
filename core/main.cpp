@@ -56,8 +56,8 @@ extern "C" {
 #include "aes/aes.h"
 #include "zlib.h"
 }
-#include "ecc.hpp"
 #include "rwmutex.hpp"
+#include "key.hpp"
 #include <cassert>
 #include <iostream>
 #include <stdio.h>
@@ -82,6 +82,7 @@ extern "C" {
 namespace yrssf{
 namespace config{
   bool AllowShell=0;
+  bool checkSign=0;
 }
 //////////////////////////////////
 const char defaultUserInfo[]="1234567890abcdef1234567890abcdef1234567890abcdef";
@@ -281,82 +282,6 @@ struct netSource{
   char      title[16];
   char      source[SOURCE_CHUNK_SIZE];
   char      endchunk[16];
-};
-class Key:public ECC{
-  public:
-  struct write{};
-  struct read{};
-  struct netSendkey{
-    nint64 p,a,b;
-    nint64 kx,ky,px,py;
-    char key[32];
-    nint64 signr;
-    nint64 sings;
-  }*buf;
-  char key[16];
-  void setkey(){
-    buf->p=e.p;
-    buf->a=e.a;
-    buf->b=e.b;
-    buf->px=pare.x;
-    buf->py=pare.y;
-    buf->kx=publickey.x;
-    buf->ky=publickey.y;
-    char * rk=randstr();
-    int i;
-    for(i=0;i<16;i++){
-      key[i]=rk[i];
-    }
-    int64_t data[2];
-    char * cp=(char*)data;
-    for(i=0;i<16;i++){
-      cp[i]=key[i];
-    }
-    Pare po(pare);
-    po.x=data[0];
-    po.y=data[1];
-    ECC::Message cryptout = encryption(po);
-    cp=(char*)&cryptout;
-    for(i=0;i<sizeof(cryptout);i++){
-      this->buf->key[i]=cp[i];
-    }
-  }
-  void getkey(){
-    int64_t * data=(int64_t*)this->buf->key;
-    ECC::Pare pp(pare);
-    ECC::Message cryptin(pp,pp);
-    cryptin.c1.x=data[0];
-    cryptin.c1.y=data[1];
-    cryptin.c2.x=data[2];
-    cryptin.c2.y=data[3];
-    ECC::Pare po(pare);
-    po=decryption(cryptin);
-    int64_t * ot=(int64_t*)key;
-    ot[0]=po.x;
-    ot[1]=po.y;
-  }
-  Key(){}
-  Key(netSendkey * sk,read):ECC(ECC::E(sk->p(),sk->a(),sk->b()),sk->kx(),sk->ky(),sk->px(),sk->py()){
-    //read mode
-    buf=sk;
-  }
-  Key(netSendkey * sk,int64_t pvk):ECC(ECC::E(sk->p(),sk->a(),sk->b()),sk->kx(),sk->ky(),sk->px(),sk->py()){
-    //read mode
-    buf=sk;
-    privatekey=pvk;
-    getkey();
-  }
-  Key(netSendkey * sk):ECC(){
-    //send mode
-    buf=sk;
-    buf->p=e.p;
-    buf->a=e.a;
-    buf->b=e.b;
-    buf->px=pare.x;
-    buf->py=pare.y;
-    buf->kx=publickey.x;
-    buf->ky=publickey.y;
-  }
 };
 struct aesblock{
   uint8_t data[16];
@@ -1215,10 +1140,13 @@ class ysConnection:public serverBase{
     aesblock newkey;
     switch(header->mode){
       case _UPDATEKEY:
-        senddata=Key((Key::netSendkey*)&source->source,Key::read());
+        senddata=Key();
         senddata.buf=(Key::netSendkey*)&respk.source;
-        senddata.setkey();
-        for(i=0;i<16;i++) newkey.data[i]=senddata.key[i];
+        senddata.initbuf();
+        senddata.computekey((unsigned char*)&source->source);
+        senddata.sign();
+        
+        for(i=0;i<16;i++) newkey.data[i]=senddata.shared[i];
         ysDB.setkey(header->userid(),&newkey);
         respk.header.userid=myuserid;
         for(i=0;i<16;i++)
@@ -1836,7 +1764,9 @@ class Client:public Server{
     short    port;
     bzero(&qypk,sizeof(qypk));
     bzero(&buf ,sizeof(buf ));
-    Key senddata((Key::netSendkey*)&(qypk.source));
+    Key senddata;
+    senddata.buf=(Key::netSendkey*)&(qypk.source);
+    senddata.initbuf();
     qypk.header.mode=_UPDATEKEY;
     qypk.header.userid=myuserid;
     
@@ -1855,9 +1785,11 @@ class Client:public Server{
           
           if(rdn!=qypk.header.unique) goto uploop2;
           
-          Key ded((Key::netSendkey*)&(buf.source),senddata.privatekey);
+          if(config::checkSign)
+          if(!senddata.checksign())return 0;
+          senddata.computekey((unsigned char*)&buf.source);
           for(i=0;i<16;i++){
-            this->key.data[i]=ded.key[i];
+            this->key.data[i]=senddata.shared[i];
           }
           return 1;
         }
