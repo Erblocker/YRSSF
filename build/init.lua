@@ -1,3 +1,3 @@
 print("initing")
-loadsharedlibs("std.so")
+loadsharedlibs("./std.so")
 print("inited")
