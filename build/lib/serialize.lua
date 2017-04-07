@@ -18,7 +18,7 @@ function serialize(obj)
             lua = lua .. "[" .. serialize(k) .. "]=" .. serialize(v) .. ",\n"  
         end  
     end  
-        lua = lua .. "}"  
+        lua = lua .. "nil\n}"  
     elseif t == "nil" then  
         return nil  
     else  
@@ -37,6 +37,7 @@ function unserialize(lua)
         error("can not unserialize a " .. t .. " type.")  
     end  
     lua = "return " .. lua  
+    print(lua)
     local func = loadstring(lua)  
     if func == nil then  
         return nil  

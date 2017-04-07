@@ -31,6 +31,10 @@
 ### cryptModeOff
 ### allowShell
 ### disallowShell
+### signerInit
+### addSignKey
+### checkSignOn
+### checkSignOff
 ## 网络相关
 ### boardcastScreenInit
 ### boardcastScreen
@@ -48,3 +52,5 @@
 ### setClientUser
 ### logUnique
 ### uniqueExist
+### ysThreadLock
+### ysThreadUnlock

@@ -2477,6 +2477,7 @@ namespace videolive{
     }
   }screen;
 }
+std::mutex lualocker;
 class API{
   int shmid;
   public:
@@ -2720,6 +2721,37 @@ class API{
     lua_register(L,"getkey",              lua_getkey);
     lua_register(L,"setkey",              lua_setkey);
     lua_register(L,"runsql",              runsql);
+    lua_register(L,"ysThreadLock",[](lua_State * L){
+      lualocker.lock();
+      return 0;
+    });
+    lua_register(L,"ysThreadUnlock",[](lua_State * L){
+      lualocker.unlock();
+      return 0;
+    });
+    lua_register(L,"signerInit",[](lua_State * L){
+      if(lua_isstring(L,1) && lua_isstring(L,2)){
+        signer.init(lua_tostring(L,1),lua_tostring(L,2));
+      }else{
+        signer.init();
+      }
+      lua_pushstring(L,(const char*)signer.pubkey);
+      lua_pushstring(L,(const char*)signer.privkey);
+      return 2;
+    });
+    lua_register(L,"addSignKey",[](lua_State * L){
+      if(!lua_isstring(L,1))return 0;
+      signer.add(lua_tostring(L,1));
+      return 0;
+    });
+    lua_register(L,"checkSignOn",[](lua_State * L){
+      config::checkSign=1;
+      return 0;
+    });
+    lua_register(L,"checkSignOff",[](lua_State * L){
+      config::checkSign=0;
+      return 0;
+    });
     lua_register(L,"loadsharedlibs",[](lua_State * L){
       if(!lua_isstring(L,1))return 0;
       libs.open(lua_tostring(L,1));
@@ -2858,6 +2890,9 @@ class Init{
     ysConnection::funcreg(gblua);
     api.funcreg(gblua);
     luaL_dofile(gblua,"init.lua");
+    if(lua_isstring(gblua,-1)){
+      std::cout<<lua_tostring(gblua,-1)<<std::endl;
+    }
   }
   ~Init(){
     lwan_status_debug("\033[40;43mYRSSF:\033[0m\033[40;36mYRSSF server shutdown\033[0m\n");

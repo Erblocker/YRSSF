@@ -2,6 +2,7 @@
 #define ys_key
 #include <iostream>
 #include <stdio.h>
+#include "base64.hpp"
 #include <arpa/inet.h>
 #include <openssl/ec.h>
 #include <openssl/ecdsa.h>
@@ -19,6 +20,8 @@ namespace yrssf{
     char     * privkey;
     Signer   * next;
     bool init(){
+      if(key!=NULL) return 0;
+      
       //Generate Public
       key = EC_KEY_new_by_curve_name(NID_X9_62_prime256v1);//NID_secp521r1
       
@@ -31,48 +34,43 @@ namespace yrssf{
       if(0 == (EC_POINT_point2oct(group, point, POINT_CONVERSION_COMPRESSED, pubkey, ECDH_SIZE, NULL))) return 0;
       return 1;
     }
-    bool init(const EC_POINT *pbk,const BIGNUM * pri){
-      key = EC_KEY_new_by_curve_name(NID_X9_62_prime256v1);//NID_secp521r1
-      
-      EC_KEY_set_private_key(key,pri);
-      EC_KEY_set_public_key(key,pbk);
-      
-      point = (struct ec_point_st *)EC_KEY_get0_public_key(key);
-      group = (struct ec_group_st *)EC_KEY_get0_group(key);
-      
+    void updatekeystr(){
+      EC_POINT_point2oct(group, point, POINT_CONVERSION_COMPRESSED, pubkey, ECDH_SIZE, NULL);
+      if(privkey)OPENSSL_free(privkey);
       privkey=BN_bn2hex(EC_KEY_get0_private_key(key));
-      if(0 == (EC_POINT_point2oct(group, point, POINT_CONVERSION_COMPRESSED, pubkey, ECDH_SIZE, NULL))) return 0;
-      return 1;
     }
-    bool init(const char * pvk,const char * pbk){
-      EC_POINT * ppk=EC_POINT_new(group);
-      BIGNUM   * vpk=BN_new();
-      
-      BN_hex2bn(&vpk,pvk);
-      EC_POINT_oct2point(group,ppk,(unsigned char*)pbk,ECDH_SIZE,NULL);
-      
-      bool res=init(ppk,vpk);
-      EC_POINT_free(ppk);
-      BN_free(vpk);
-      return res;
-    }
-    bool init(const EC_POINT * pbk){
-      key = EC_KEY_new_by_curve_name(NID_X9_62_prime256v1);//NID_secp521r1
-      
+    void setpublickey(const EC_POINT *pbk){
+      if(key==NULL)init();
       EC_KEY_set_public_key(key,pbk);
-      
-      point = (struct ec_point_st *)EC_KEY_get0_public_key(key);
-      group = (struct ec_group_st *)EC_KEY_get0_group(key);
-      
-      if(0 == (EC_POINT_point2oct(group, point, POINT_CONVERSION_COMPRESSED, pubkey, ECDH_SIZE, NULL))) return 0;
-      return 1;
+      updatekeystr();
     }
-    bool init(const char * pbk){
+    void setprivatekey(const BIGNUM * pvk){
+      if(key==NULL)init();
+      EC_KEY_set_private_key(key,pvk);
+      updatekeystr();
+    }
+    void setpublickey(const char * pbk){
+      if(key==NULL)init();
       EC_POINT * ppk=EC_POINT_new(group);
       EC_POINT_oct2point(group,ppk,(unsigned char*)pbk,ECDH_SIZE,NULL);
-      bool res=init(ppk);
+      setpublickey(ppk);
       EC_POINT_free(ppk);
-      return res;
+    }
+    void setprivatekey(const char *pvk){
+      if(key==NULL)init();
+      BIGNUM   * vpk=BN_new();
+      BN_hex2bn(&vpk,pvk);
+      setprivatekey(vpk);
+      BN_free(vpk);
+    }
+    void init(const char * pvk,const char * pbk){
+      init();
+      setprivatekey(pvk);
+      setpublickey(pbk);
+    }
+    void init(const char * pbk){
+      init();
+      setpublickey(pbk);
     }
     bool sign(unsigned char * data,unsigned int datalen,unsigned char * signature,unsigned int * sig_len){
       return 1==ECDSA_sign(0,data,datalen,signature,sig_len,key);
@@ -87,11 +85,17 @@ namespace yrssf{
           return 0;
       }
     }
+    void add(const char * pbk){
+      Signer * op=next;
+      next=new Signer();
+      next->init(pbk);
+      next->next=op;
+    }
     Signer(){
       key=NULL;
       next=NULL;
       privkey=NULL;
-      init();
+      //init();
     }
     ~Signer(){
       if(key)    EC_KEY_free(key);
