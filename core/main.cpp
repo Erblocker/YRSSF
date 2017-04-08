@@ -2998,6 +2998,9 @@ static lwan_http_status_t ajax(lwan_request_t *request,lwan_response_t *response
       return HTTP_OK;
     }
 }
+static lwan_http_status_t ruiyi(lwan_request_t *request,lwan_response_t *response, void *data){
+    return HTTP_INTERNAL_ERROR;
+}
 void init_daemon(){
   int pid;
   int i; 
@@ -3031,6 +3034,7 @@ extern "C" int main(){
     //handler	data	prefix		len	flags				module				args		realm	password_file
       ajax	,NULL	,"/ajax"	,0	,(lwan_handler_flags_t)0	,NULL				,NULL	,{	NULL	,NULL	},
       NULL	,NULL	,"/"		,0	,(lwan_handler_flags_t)0	,lwan_module_serve_files()	,&sfile	,{	NULL	,NULL	},
+      ruiyi	,NULL	,"/wmexam"	,0	,(lwan_handler_flags_t)0	,NULL				,NULL	,{	NULL	,NULL	},
       NULL	,NULL	,NULL		,0	,(lwan_handler_flags_t)0	,NULL				,NULL	,{	NULL	,NULL	}
     };
     
