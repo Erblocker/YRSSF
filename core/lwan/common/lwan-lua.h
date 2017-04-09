@@ -36,3 +36,4 @@ struct lwan_lua_settings_t {
     .flags = 0
 
 const lwan_module_t *lwan_module_lua(void);
+

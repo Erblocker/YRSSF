@@ -56,9 +56,9 @@ extern "C" {
 #include "aes/aes.h"
 #include "zlib.h"
 }
+#include "base64.hpp"
 #include "rwmutex.hpp"
 #include "key.hpp"
-#include "base64.hpp"
 #include <cassert>
 #include <iostream>
 #include <stdio.h>
@@ -291,12 +291,12 @@ struct aesblock{
     return *this;
   }
   void tobase64(char * out)const{
-    base64_encode(data,16,(unsigned char*)out);
+    base64::encode(data,16,(unsigned char*)out);
   }
   void getbase64(const char * in){
     char buf[64];
     if(strlen(in)>64)return;
-    base64_decode((const unsigned char*)in,(unsigned char*)buf);
+    base64::decode((const unsigned char*)in,(unsigned char*)buf);
     for(int i=0;i<16;i++){
       data[i]=buf[i];
     }
@@ -2998,11 +2998,69 @@ static lwan_http_status_t ajax(lwan_request_t *request,lwan_response_t *response
       return HTTP_OK;
     }
 }
-static lwan_http_status_t ruiyi(lwan_request_t *request,lwan_response_t *response, void *data){
-    return HTTP_INTERNAL_ERROR;
+static lwan_http_status_t upload_b(lwan_request_t *request,lwan_response_t *response, void *data,const char * luapath){
+    int  fd;
+    int l,i;
+    static int cnum=0;
+    cnum++;
+    char path[PATH_MAX];
+    const static char Emessage[]="<error>NULL</error>";
+    const char * message;
+    if(UNLIKELY(request->header.body==NULL))
+      return HTTP_INTERNAL_ERROR;
+    sprintf(
+      path,
+      "/tmp/yrssf_upload_%d_%d",
+      yrssf::randnum(),
+      cnum
+    );
+    fd=open(path,O_RDWR|O_CREAT);
+    write(
+      fd,
+      request->header.body->value,
+      request->header.body->len
+    );
+    close(fd);
+    lua_State * L=lua_newthread(yrssf::gblua);
+    lua_pushstring(L,path);
+    lua_setglobal(L,"FILE_PATH");
+    lua_createtable(L,0,request->cookies.len);
+    for(i=0;i<request->cookies.len;i++){
+      lua_pushstring(L, request->cookies.base[i].key);
+      lua_pushstring(L, request->cookies.base[i].value);
+      lua_settable(L, -3);
+    }
+    lua_setglobal(L,"COOKIE");
+    lua_createtable(L,0,request->query_params.len);
+    for(i=0;i<request->query_params.len;i++){
+      lua_pushstring(L, request->query_params.base[i].key);
+      lua_pushstring(L, request->query_params.base[i].value);
+      lua_settable(L, -3);
+    }
+    lua_setglobal(L,"GET");
+    luaL_dofile(L,luapath);
+    remove(path);
+    response->mime_type = "text/xml;charset=utf-8";
+    if(lua_isstring(L,-1)){
+      std::cout<<lua_tostring(L,-1)<<std::endl;
+    }
+    lua_getglobal(L,"RESULT");
+    if(lua_isstring(L,-1)){
+      message=lua_tostring(L,-1);
+      l=strlen(message);
+      strbuf_set(response->buffer, message,l);
+      return HTTP_OK;
+    }else{
+      l=sizeof(Emessage);
+      strbuf_set_static(response->buffer,Emessage,l-1);
+      return HTTP_OK;
+    }
+}
+static lwan_http_status_t xmlRPC(lwan_request_t *request,lwan_response_t *response, void *data){
+    return upload_b(request,response,data,"xmlRPC.lua");
 }
 static lwan_http_status_t uploader(lwan_request_t *request,lwan_response_t *response, void *data){
-    return HTTP_INTERNAL_ERROR;
+    return upload_b(request,response,data,"uploader.lua");
 }
 void init_daemon(){
   int pid;
@@ -3024,7 +3082,7 @@ void init_daemon(){
   umask(0);
   return; 
 }
-extern "C" int main(){
+int main(){
     struct lwan_serve_files_settings_t sfile;
     bzero(&sfile,sizeof(sfile));
     sfile.root_path                        = "static";
@@ -3036,7 +3094,7 @@ extern "C" int main(){
     lwan_url_map_t default_map[]={
     //handler	data	prefix		len	flags				module				args		realm	password_file
       ajax	,NULL	,"/ajax"	,0	,(lwan_handler_flags_t)0	,NULL				,NULL	,{	NULL	,NULL	},
-      ruiyi	,NULL	,"/wmexam"	,0	,(lwan_handler_flags_t)0	,NULL				,NULL	,{	NULL	,NULL	},
+      xmlRPC	,NULL	,"/wmexam"	,0	,(lwan_handler_flags_t)0	,NULL				,NULL	,{	NULL	,NULL	},
       uploader	,NULL	,"/PutTemproraryStorage",0,(lwan_handler_flags_t)0	,NULL				,NULL	,{	NULL	,NULL	},
       uploader	,NULL	,"/uploader"	,0	,(lwan_handler_flags_t)0	,NULL				,NULL	,{	NULL	,NULL	},
       NULL	,NULL	,"/"		,0	,(lwan_handler_flags_t)0	,lwan_module_serve_files()	,&sfile	,{	NULL	,NULL	},

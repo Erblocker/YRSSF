@@ -1,5 +1,7 @@
 #ifndef ys_base64
 #define ys_base64
+namespace yrssf{
+  namespace base64{
 static const char *codes = 
 "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
@@ -27,7 +29,7 @@ static const unsigned char map[256] = {
 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
 255, 255, 255, 255 };
 
-int base64_encode(const unsigned char *in,  unsigned long len, 
+int encode(const unsigned char *in,  unsigned long len, 
                         unsigned char *out)
 {
    unsigned long i, len2, leven;
@@ -61,7 +63,7 @@ int base64_encode(const unsigned char *in,  unsigned long len,
    return p - out;
 }
 
-int base64_decode(const unsigned char *in, unsigned char *out)
+int decode(const unsigned char *in, unsigned char *out)
 {
 	unsigned long t, x, y, z;
 	unsigned char c;
@@ -85,5 +87,8 @@ int base64_decode(const unsigned char *in, unsigned char *out)
 //		return -1;
 //	}
 	return z;
+}
+////////////////////////
+  }
 }
 #endif

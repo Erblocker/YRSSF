@@ -100,10 +100,10 @@ static const lwan_module_t *lwan_module_find(lwan_t *l, const char *name)
             lwan_status_error("Module name too long: %s", name);
             return NULL;
         }
-
+        lwan_status_debug("find symbol: %s", module_symbol);
         module_fn = find_handler_symbol(module_symbol);
         if (!module_fn) {
-            lwan_status_error("Module \"%s\" does not exist", name);
+            lwan_status_error("Module \"%s\" does not exist!", name);
             return NULL;
         }
 
