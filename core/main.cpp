@@ -1,6 +1,8 @@
 #define SERVER_PORT         1215
 #define CLIENT_PORT         8001
 #define SOURCE_CHUNK_SIZE   4096
+#define WEB_FLAG_DEF        (lwan_handler_flags_t)(HANDLER_PARSE_COOKIES|HANDLER_PARSE_QUERY_STRING|HANDLER_PARSE_POST_DATA)
+#define WEB_FLAG_UPL        (lwan_handler_flags_t)(HANDLER_PARSE_COOKIES|HANDLER_PARSE_QUERY_STRING)
 #define _SUCCEED         0x30
 #define _FAIL            0x31
 #define _NEWSRC          0x32
@@ -3093,10 +3095,10 @@ int main(){
     
     lwan_url_map_t default_map[]={
     //handler	data	prefix		len	flags				module				args		realm	password_file
-      ajax	,NULL	,"/ajax"	,0	,(lwan_handler_flags_t)0	,NULL				,NULL	,{	NULL	,NULL	},
-      xmlRPC	,NULL	,"/wmexam"	,0	,(lwan_handler_flags_t)0	,NULL				,NULL	,{	NULL	,NULL	},
-      uploader	,NULL	,"/PutTemproraryStorage",0,(lwan_handler_flags_t)0	,NULL				,NULL	,{	NULL	,NULL	},
-      uploader	,NULL	,"/uploader"	,0	,(lwan_handler_flags_t)0	,NULL				,NULL	,{	NULL	,NULL	},
+      ajax	,NULL	,"/ajax"	,0	,WEB_FLAG_DEF			,NULL				,NULL	,{	NULL	,NULL	},
+      xmlRPC	,NULL	,"/wmexam"	,0	,WEB_FLAG_UPL			,NULL				,NULL	,{	NULL	,NULL	},
+      uploader	,NULL	,"/PutTemproraryStorage",0,WEB_FLAG_UPL			,NULL				,NULL	,{	NULL	,NULL	},
+      uploader	,NULL	,"/uploader"	,0	,WEB_FLAG_UPL			,NULL				,NULL	,{	NULL	,NULL	},
       NULL	,NULL	,"/"		,0	,(lwan_handler_flags_t)0	,lwan_module_serve_files()	,&sfile	,{	NULL	,NULL	},
       NULL	,NULL	,NULL		,0	,(lwan_handler_flags_t)0	,NULL				,NULL	,{	NULL	,NULL	}
     };
