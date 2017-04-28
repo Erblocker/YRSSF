@@ -20,6 +20,7 @@
 ### trylogin
 ### changePwd
 ### changeAcl
+### delUser
 ### readSrc
 ### writeSrc
 ### delSrc

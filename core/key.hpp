@@ -139,6 +139,19 @@ namespace yrssf{
         return 1;
       }
     }
+    bool computekey(unsigned char pubkey2[],char * out){
+      EC_POINT *point2c;
+      point2c = EC_POINT_new(group);
+      EC_POINT_oct2point(group, point2c, pubkey2, ECDH_SIZE, NULL);
+      //if (0 != EC_POINT_cmp(group, point2, point2c, NULL)) return 0;
+      if(0 == (len = ECDH_compute_key(out, ECDH_SIZE, point2c, ecdh, NULL))){
+        EC_POINT_free(point2c);
+        return 0;
+      }else{
+        EC_POINT_free(point2c);
+        return 1;
+      }
+    }
     void initbuf(){
       int i;
       init();
@@ -165,6 +178,6 @@ namespace yrssf{
     ~Key(){
       if(ecdh)   EC_KEY_free(ecdh);
     }
-  };
+  }DH;
 }
 #endif

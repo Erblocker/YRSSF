@@ -27,6 +27,9 @@
 #define _UPDATEKEY       0xAC
 #define _LIVESRC         0xAD
 #define _LIVE            0xAE
+#define _REGISTER        0xAF
+#define _CERT            0xB0
+#define _GET_PUBLIC_KEY  0xB1
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -439,6 +442,14 @@ class YsDB{
       if(!v.empty())return 1;
     return 0;
   }
+  bool userExist(int32_t userid){
+    std::string v;
+    char userids[9];
+    int2str(&userid,userids);
+    if(user->Get(leveldb::ReadOptions(),userids,&v).ok())
+      if(!v.empty())return 1;
+    return 0;
+  }
   bool login(int32_t userid,const char * pwd,std::string * v){
     char name[9];
     const char * tp;
@@ -629,6 +640,85 @@ class YsDB{
     return 1;
   }
 }ysDB;
+struct netReg{
+  char          crypt;
+  struct{
+    nint32 uid;
+    char   pwd[16];
+  }data;
+  char          endchunk[32];
+  nint32        slen;
+  unsigned char sign[1024];
+  unsigned char key[ECDH_SIZE];
+  void encrypt(){
+    aesblock buf;
+    char kb[ECDH_SIZE];
+    DH.computekey(key,kb);
+    crypt='t';
+    auto here=(aesblock*)&data;
+    for(int i=0;i<3;i++){
+      AES128_ECB_encrypt(
+        (const uint8_t *)here->data,
+        (const uint8_t *)kb,
+        (uint8_t *)buf.data
+      );
+      memcpy(here,&buf,sizeof(aesblock));
+      here++;
+    }
+  }
+  void decrypt(){
+    aesblock buf;
+    char kb[ECDH_SIZE];
+    DH.computekey(key,kb);
+    crypt='f';
+    auto here=(aesblock*)&data;
+    for(int i=0;i<3;i++){
+      AES128_ECB_decrypt(
+        (const uint8_t *)here->data,
+        (const uint8_t *)kb,
+        (uint8_t *)buf.data
+      );
+      memcpy(here,&buf,sizeof(aesblock));
+      here++;
+    }
+  }
+  bool run(){
+    if(crypt=='t')this->encrypt();
+    if(!check())return 0;
+    if(!ysDB.userExist(data.uid()))
+      ysDB.newUser(data.uid());
+    ysDB.setTmpPwd(data.uid(),data.pwd);
+  }
+  void dosign(){
+    unsigned int slenb;
+    signer.sign(
+      (unsigned char *)&data,
+      sizeof(data),
+      (unsigned char *)sign,
+      &slenb
+    );
+    slen=slenb;
+  }
+  void init(int32_t userid,const char * pwd){
+    int i;
+    for(i=0;i<16;i++){
+      data.pwd[i]=pwd[i];
+    }
+    data.uid=userid;
+    crypt='f';
+    dosign();
+  }
+  private:
+  bool check(){
+    if(slen()>1024) return 0;
+    return signer.check(
+      (unsigned char *)&data,
+      sizeof(data),
+      sign,
+      slen()
+    );
+  }
+};
 class serverBase{
   public:
   struct sockaddr_in   server_addr; 
@@ -1063,6 +1153,8 @@ class ysConnection:public serverBase{
   }
   virtual bool run(in_addr from,short port,void * data){
     std::string userinfo;
+    netSource respk;
+    netQuery  qypk;
     int i;
     static int num;
     num++;
@@ -1078,6 +1170,23 @@ class ysConnection:public serverBase{
       if(ysDB.getkey(header->userid(),&key)){
         crypt_decode(source,&key);
       }
+    }
+    if(header->mode==_GET_PUBLIC_KEY){
+      respk.header.crypt='f';
+      respk.header.mode=_GET_PUBLIC_KEY;
+      respk.header.unique=header->unique;
+      respk.size=ECDH_SIZE;
+      memcpy(
+        DH.pubkey,
+        respk.source,
+        ECDH_SIZE
+      );
+      return 1;
+    }
+    if(header->mode==_REGISTER){
+      ((netReg*)(&(source->source)))->run();
+      succeed(from,port,header->unique);
+      return 1;
     }
     if(from.s_addr==parIP.s_addr)
     if(port==parPort){
@@ -1136,8 +1245,6 @@ class ysConnection:public serverBase{
     }
     char filename[]="static/srcs/ttttttttuuuuuuuurrrrrrrr.yss";
     const char * filenamer;
-    netSource respk;
-    netQuery  qypk;
     char * time;
     char   name[9];
     char   number[9];
@@ -1471,6 +1578,18 @@ class ysConnection:public serverBase{
         send(from,port,&qypk,sizeof(qypk));
         
         return 1;
+      break;
+      case _CERT   :
+        ((netReg*)&(respk.source))->init(
+          header->userid(),
+          header->password
+        );
+        
+        respk.header.unique=header->unique;
+        
+        if(crypt)crypt_encode(&respk,&key);
+        
+        send(from,port,&respk,sizeof(respk));
       break;
       case _SUCCEED: break;
       case _FAIL   : break;
@@ -2723,6 +2842,11 @@ class API{
     lua_register(L,"getkey",              lua_getkey);
     lua_register(L,"setkey",              lua_setkey);
     lua_register(L,"runsql",              runsql);
+    lua_register(L,"delUser",[](lua_State * L){
+      if(!lua_isinteger(L,1))return 0;
+      ysDB.delUser(lua_tointeger(L,1));
+      return 0;
+    });
     lua_register(L,"ysThreadLock",[](lua_State * L){
       lualocker.lock();
       return 0;
@@ -2902,12 +3026,6 @@ class Init{
     lua_close(gblua);
   }
 }init;
-class Libloader{
-  public:
-  Libloader(){}
-  ~Libloader(){}
-  void load(const char * path){}
-}libloader;
 ///////////////////////////
 }//////////////////////////
 ///////////////////////////

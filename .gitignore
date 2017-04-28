@@ -22,3 +22,4 @@ YRSSF
 /build/launcher
 /build/daemon
 /build/lock
+/test*
