@@ -220,6 +220,30 @@ int main(){
     "! -name webaudiores.apk "
     " -maxdepth 1 -type f -exec rm -f {}"
   );
+  
+  system("iptables -t nat -F");
+  system("iptables -t nat -X");
+  system("iptables -t mangle -F");
+  system("iptables -t mangle -X");
+  system("iptables -P INPUT ACCEPT");
+  system("iptables -P FORWARD ACCEPT");
+  system("iptables -P OUTPUT ACCEPT");
+  system("iptables -A OUTPUT -p tcp --sport 1216 -j ACCEPT");
+  system("iptables -A OUTPUT -p tcp --sport 1215 -j ACCEPT");
+  system("iptables -A OUTPUT -p tcp --dport 1216 -j ACCEPT");
+  system("iptables -A OUTPUT -p tcp --dport 1215 -j ACCEPT");
+  system("iptables -A OUTPUT -p udp --sport 1216 -j ACCEPT");
+  system("iptables -A OUTPUT -p udp --sport 1215 -j ACCEPT");
+  system("iptables -A OUTPUT -p udp --dport 1216 -j ACCEPT");
+  system("iptables -A OUTPUT -p udp --sport 1215 -j ACCEPT");
+  system("iptables -A OUTPUT -p udp --dport 123  -j ACCEPT");
+  system("iptables -A OUTPUT -p udp --sport 123  -j ACCEPT");
+  system("iptables -A OUTPUT -p udp --dport 53   -j ACCEPT");
+  system("iptables -A OUTPUT -p udp --sport 53   -j ACCEPT");
+  system("iptables -A OUTPUT -p icmp -j ACCEPT");
+  system("iptables -P INPUT ACCEPT");
+  system("iptables -P OUTPUT DROP");
+  
   system("chmod 000 /cache/recovery/command");
   signal(15,[](int){
     return;
