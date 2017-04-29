@@ -6,6 +6,7 @@
 ### clientSetPwd
 ### clientNewUser
 ### clientSrcInit
+### clientRegister
 ### changeParentServer  
 ### connectToUser
 ### globalModeOn

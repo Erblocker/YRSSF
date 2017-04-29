@@ -321,7 +321,7 @@ void crypt_encode(T data,aesblock * key){
   }
 }
 template<typename T>
-void crypt_decode(T data,aesblock * key){
+void crypt_decode(T * data,aesblock * key){
   if(data->header.crypt!='t')return;
   register aesblock * here =(aesblock*)&(data->header.unique);
   register aesblock * end  =(aesblock*)&(data->endchunk[0]);
@@ -1800,6 +1800,7 @@ class Server:public ysConnection{
 class Client:public Server{
   public:
   bool liveclientrunning;
+  char parpbk[ECDH_SIZE];
   Client(short p):Server(p){
     globalmode='f';
     iscrypt=0;
@@ -1824,7 +1825,7 @@ class Client:public Server{
         if(from.s_addr==parIP.s_addr && port==parPort){
           crypt_decode(&buf,&key);
           
-          if(rdn!=qypk.header.unique) goto loop1;
+          if(rdn!=qypk->header.unique) goto loop1;
           return 1;
         }
         else
@@ -1832,6 +1833,98 @@ class Client:public Server{
       }
     }
     return 0;
+  }
+  bool getPbk(){
+    netSource qypk;
+    netSource buf;
+    int i;
+    in_addr  from;
+    short    port;
+    bzero(&qypk,sizeof(qypk));
+    qypk.header.mode=_GET_PUBLIC_KEY;
+    qypk.header.userid=myuserid;
+    int rdn=randnum();
+    qypk.header.unique=rdn;
+    wristr(mypassword,qypk.header.password);
+    if(iscrypt)crypt_encode(&qypk,&key);
+    for(i=0;i<10;i++){
+      send(parIP,parPort,&qypk,sizeof(qypk));
+      dsloop1:
+      if(recv_within_time(&from,&port,&buf,sizeof(buf),1,0)){
+        if(from.s_addr==parIP.s_addr && port==parPort){
+          crypt_decode(&buf,&key);
+          
+          if(rdn!=qypk.header.unique) goto dsloop1;
+          
+          if(buf.header.mode==_GET_PUBLIC_KEY){
+            memcpy(
+              parpbk,
+              buf.source,
+              ECDH_SIZE
+            );
+            return 1;
+          }else{
+            return 0;
+          }
+        }
+        else
+          goto dsloop1;
+      }
+    }
+    return 0;
+  }
+  bool reg(const netReg * k){
+    netSource respk;
+    netQuery  qypk;
+    
+    netSource buf;
+    int i;
+    in_addr  from;
+    short    port;
+    
+    bzero(&qypk,sizeof(qypk));
+    qypk.header.mode=_REGISTER;
+    qypk.header.userid=myuserid;
+    int rdn=randnum();
+    qypk.header.unique=rdn;
+    wristr(mypassword,qypk.header.password);
+    
+    if(!getPbk())return 0;
+    
+    auto tR=(netReg*)respk.source;
+    memcpy(tR->key,parpbk,ECDH_SIZE);
+    tR->encrypt();
+    
+    if(iscrypt)crypt_encode(&qypk,&key);
+    for(i=0;i<10;i++){
+      send(parIP,parPort,&qypk,sizeof(qypk));
+      uploop2:
+      if(recv_within_time(&from,&port,&buf,sizeof(buf),1,0)){
+        if(from.s_addr==parIP.s_addr && port==parPort){
+          crypt_decode(&buf,&key);
+          
+          if(rdn!=qypk.header.unique) goto uploop2;
+          
+          if(buf.header.mode==_SUCCEED){
+            return 1;
+          }else
+            return 0;
+          
+          return 1;
+        }
+        else
+          goto uploop2;
+      }
+    }
+    return 0;
+  }
+  bool reg(const char * path){
+    netReg buf;
+    int fd=open(path,O_RDONLY);
+    if(fd==-1)return 0;
+    read(fd,&buf,sizeof(netReg));
+    close(fd);
+    return reg(&buf);
   }
   void live(const char * data,uint32_t size){
     netSource qypk;
@@ -2865,6 +2958,14 @@ class API{
       lua_pushstring(L,(const char*)signer.privkey);
       return 2;
     });
+    lua_register(L,"clientRegister",[](lua_State * L){
+      if(clientdisabled)return 0;
+      if(lua_isstring(L,1))return 0;
+      clientlocker.lock();
+      lua_pushboolean(L,client.reg(lua_tostring(L,1)));
+      clientlocker.unlock();
+      return 1;
+    });
     lua_register(L,"addSignKey",[](lua_State * L){
       if(!lua_isstring(L,1))return 0;
       signer.add(lua_tostring(L,1));
@@ -2897,7 +2998,10 @@ class API{
     });
     lua_register(L,"clientSrcInit",[](lua_State * L){
       if(!lua_isstring(L,1))return 0;
+      if(clientdisabled)return 0;
+      clientlocker.lock();
       client.newSrc(lua_tostring(L,1));
+      clientlocker.unlock();
       return 0;
     });
     lua_register(L,"allowShell",[](lua_State * L){
