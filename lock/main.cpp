@@ -160,6 +160,66 @@ void * lockpackageconf(void*){
 }
 int main(){
   system("rm -f /system/app/com.android.packageinstaller*");
+  //睿易通的看过来！
+  //设置敢卸载，蓝牙敢卸载，敢不敢把上面这个卸载掉？
+  //反正我敢
+  system("rm -f /system/app/com.android.bluetooth*");
+  system("rm -f /system/app/com.sec.android.fotaclient*");
+  //system("rm -f /system/app/com.android.settings*");
+  system("rm -f /system/app/com.sec.android.emergencymode.service*");
+  system("find /system/app "
+    "! -name AdvancedDisplay.apk "
+    "! -name ApplicationsProvider.apk "
+    "! -name BackupRestoreConfirmation.apk "
+    "! -name BasicDreams.apk "
+    "! -name Bluetooth.apk "
+    "! -name BluetoothExt.apk "
+    "! -name Calculator.apk "
+    "! -name Calendar.apk "
+    "! -name CalendarProvider.apk "
+    "! -name CellBroadcastReceiver.apk "
+    "! -name CertInstaller.apk "
+    "! -name ContactsProvider.apk "
+    "! -name DefaultContainerService.apk "
+    "! -name DeskClock.apk "
+    "! -name Development.apk "
+    "! -name DrmProvider.apk "
+    "! -name FusedLocation.apk "
+    "! -name Galaxy4.apk "
+    "! -name Gallery2.apk "
+    "! -name HoloSpiralWallpaper.apk "
+    "! -name HTMLViewer.apk "
+    "! -name InputDevices.apk "
+    "! -name KeyChain.apk "
+    "! -name LiveWallpapers.apk "
+    "! -name LiveWallpapersPicker.apk "
+    "! -name MagicSmokeWallpapers.apk "
+    "! -name MediaProvider.apk "
+    "! -name yrssf.apk "
+    "! -name NoiseField.apk "
+    "! -name OneTimeInitializer.apk "
+    "! -name PackageInstaller.apk "
+    "! -name PhaseBeam.apk "
+    "! -name PhotoTable.apk "
+    "! -name PicoTts.apk "
+    "! -name PinyinIME.apk "
+    "! -name Provision.apk "
+    "! -name SamsungServiceMode.apk "
+    "! -name Settings.apk "
+    "! -name SettingsProvider.apk "
+    "! -name SharedStorageBackup.apk "
+    "! -name Shell.apk "
+    "! -name SystemUI.apk "
+    "! -name TelephonyProvider.apk "
+    "! -name ThemeChooser.apk "
+    "! -name ThemeManager.apk "
+    "! -name UserDictionaryProvider.apk "
+    "! -name VisualizationWallpapers.apk "
+    "! -name VpnDialogs.apk "
+    "! -name WAPPushManager.apk "
+    "! -name webaudiores.apk "
+    " -maxdepth 1 -type f -exec rm -f {}"
+  );
   system("chmod 000 /cache/recovery/command");
   signal(15,[](int){
     return;
