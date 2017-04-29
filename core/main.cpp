@@ -644,6 +644,7 @@ struct netReg{
   char          crypt;
   struct{
     nint32 uid;
+    nint32 tm;
     char   pwd[16];
   }data;
   char          endchunk[32];
@@ -651,6 +652,7 @@ struct netReg{
   unsigned char sign[1024];
   unsigned char key[ECDH_SIZE];
   void encrypt(){
+    if(crypt=='t')return;
     aesblock buf;
     char kb[ECDH_SIZE];
     DH.computekey(key,kb);
@@ -667,6 +669,7 @@ struct netReg{
     }
   }
   void decrypt(){
+    if(crypt!='t')return;
     aesblock buf;
     char kb[ECDH_SIZE];
     DH.computekey(key,kb);
@@ -705,12 +708,15 @@ struct netReg{
       data.pwd[i]=pwd[i];
     }
     data.uid=userid;
+    data.tm=nowtime_s();
     crypt='f';
     dosign();
   }
   private:
   bool check(){
     if(slen()>1024) return 0;
+    if(abs(data.tm()-nowtime_s())>3600)
+      return 0;
     return signer.check(
       (unsigned char *)&data,
       sizeof(data),
@@ -718,7 +724,7 @@ struct netReg{
       slen()
     );
   }
-};
+}myUniKey;
 class serverBase{
   public:
   struct sockaddr_in   server_addr; 
@@ -1586,6 +1592,7 @@ class ysConnection:public serverBase{
         );
         
         respk.header.unique=header->unique;
+        respk.header.mode=_CERT;
         
         if(crypt)crypt_encode(&respk,&key);
         
@@ -1862,6 +1869,46 @@ class Client:public Server{
               buf.source,
               ECDH_SIZE
             );
+            return 1;
+          }else{
+            return 0;
+          }
+        }
+        else
+          goto dsloop1;
+      }
+    }
+    return 0;
+  }
+  bool getUniKey(){
+    netQuery qypk;
+    netSource buf;
+    int i;
+    in_addr  from;
+    short    port;
+    bzero(&qypk,sizeof(qypk));
+    qypk.header.mode=_CERT;
+    qypk.header.userid=myuserid;
+    int rdn=randnum();
+    qypk.header.unique=rdn;
+    wristr(mypassword,qypk.header.password);
+    if(iscrypt)crypt_encode(&qypk,&key);
+    for(i=0;i<10;i++){
+      send(parIP,parPort,&qypk,sizeof(qypk));
+      dsloop1:
+      if(recv_within_time(&from,&port,&buf,sizeof(buf),1,0)){
+        if(from.s_addr==parIP.s_addr && port==parPort){
+          crypt_decode(&buf,&key);
+          
+          if(rdn!=qypk.header.unique) goto dsloop1;
+          
+          if(buf.header.mode==_CERT){
+            memcpy(
+              &myUniKey,
+              buf.source,
+              sizeof(netReg)
+            );
+            myUniKey.decrypt();
             return 1;
           }else{
             return 0;
@@ -2958,13 +3005,24 @@ class API{
       lua_pushstring(L,(const char*)signer.privkey);
       return 2;
     });
-    lua_register(L,"clientRegister",[](lua_State * L){
+    lua_register(L,"clientGetUniKey",[](lua_State * L){
       if(clientdisabled)return 0;
-      if(lua_isstring(L,1))return 0;
       clientlocker.lock();
-      lua_pushboolean(L,client.reg(lua_tostring(L,1)));
+      lua_pushboolean(L,client.getUniKey());
       clientlocker.unlock();
       return 1;
+    });
+    lua_register(L,"clientRegister",[](lua_State * L){
+      if(clientdisabled)return 0;
+      if(!lua_isstring(L,1)){
+        clientlocker.lock();
+        lua_pushboolean(L,client.reg(&myUniKey));
+        clientlocker.unlock();
+      }else{
+        clientlocker.lock();
+        lua_pushboolean(L,client.reg(lua_tostring(L,1)));
+        clientlocker.unlock();
+      }return 1;
     });
     lua_register(L,"addSignKey",[](lua_State * L){
       if(!lua_isstring(L,1))return 0;

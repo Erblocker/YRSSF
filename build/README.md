@@ -7,6 +7,7 @@
 ### clientNewUser
 ### clientSrcInit
 ### clientRegister
+### clientGetUniKey
 ### changeParentServer  
 ### connectToUser
 ### globalModeOn
