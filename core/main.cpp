@@ -1,11 +1,3 @@
-#include <unistd.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <sys/file.h>
-#include <arpa/inet.h>
-#include <sys/shm.h>
-#include <sys/ipc.h>
-#include <sys/stat.h>
 #include <pthread.h>
 #include <netinet/in.h> 
 #include <errno.h>
@@ -21,8 +13,6 @@ extern "C" {
 #include "lua/src/lualib.h"
 #include "lua/src/lauxlib.h"
 #include "lua/src/luaconf.h"
-#include "lwan.h"
-#include "lwan-serve-files.h"
 #include "zlib.h"
 }
 #include "base64.hpp"
@@ -63,33 +53,6 @@ extern "C" {
 #include "webserver.hpp"
 namespace yrssf{
 //////////////////////////////////
-class Libs{
-  std::list<void*> liblist;
-  public:
-  Libs(){}
-  ~Libs(){
-    std::list<void*>::iterator i;
-    for(i=liblist.begin(); i!=liblist.end();i++)
-      dlclose(*i);
-  }
-  void open(const char * path){
-    void * handler=dlopen(path,RTLD_LAZY);
-    if(handler==NULL){
-      printf("fail to open %s \n" ,path);
-      return;
-    }
-    
-    liblist.push_back(handler);
-    
-    auto func=(void(*)(lua_State *))dlsym(handler,"lua_open");
-    const char * err=dlerror();
-    
-    if(err)printf("Error:%s\n",err);
-    
-    if(func)func(gblua);
-    
-  }
-}libs;
 sqlite3  * db;
 std::mutex lualocker;
 class API{
@@ -419,11 +382,6 @@ class API{
     });
     lua_register(L,"checkSignOff",[](lua_State * L){
       config::checkSign=0;
-      return 0;
-    });
-    lua_register(L,"loadsharedlibs",[](lua_State * L){
-      if(!lua_isstring(L,1))return 0;
-      libs.open(lua_tostring(L,1));
       return 0;
     });
     lua_register(L,"logUnique",[](lua_State * L){

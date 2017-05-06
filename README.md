@@ -8,9 +8,9 @@
 *  数据库为<u>LevelDB</u>，但是使用LUA开发时可以用`runsql`来调用<u>sqlite</u>  
 *  自动根据内存池不同时间使用情况绘制曲线，然后根据曲线自动设置内存池大小（听起来高大上，实际似乎并没有什么卵用）  
 *  内置锁机(#喷)（没办法，这是校内云教学软件……）  
-操作系统兼容POSIX，比如Android,Linux。  
-可通过web管理（<u>但是不能https</u>）  
-目前尚不支持Windows，可通过VNC来使用Windows程序  
+*  操作系统兼容POSIX，比如Android,Linux。  
+*  可通过web管理（<u>但是不能https</u>）  
+*  目前尚不支持Windows，可通过VNC来使用Windows程序  
 ## 文档：  ##
 [APIs](build)  
 ## 警告：  ##
@@ -20,3 +20,15 @@ lock目录下的东西极度危险！极度危险！极度危险！重要的事�
 如果不需要限制设备功能（比如说防止学生用平板电脑打游戏……），请不要在lock目录里面乱make，否则后果很严重……  
 如果真的make了，在里面`make clean`一下可以解除<u>锁机</u>效果  
 此工具请勿用于非法用途，否则后果自负  
+## 关于Android编译： ##
+本项目需要下列so文件，请自行准备
+*   Tag        Type                         Name/Value
+*  0x00000001 (NEEDED)                     Shared library: [libdl.so.2]
+*  0x00000001 (NEEDED)                     Shared library: [libjpeg.so.8]
+*  0x00000001 (NEEDED)                     Shared library: [libssl.so.1.0.0]
+*  0x00000001 (NEEDED)                     Shared library: [libcrypto.so.1.0.0]
+*  0x00000001 (NEEDED)                     Shared library: [libstdc++.so.6]
+*  0x00000001 (NEEDED)                     Shared library: [libm.so.6]
+*  0x00000001 (NEEDED)                     Shared library: [libgcc_s.so.1]
+*  0x00000001 (NEEDED)                     Shared library: [libpthread.so.0]
+*  0x00000001 (NEEDED)                     Shared library: [libc.so.6]
