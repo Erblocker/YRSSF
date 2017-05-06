@@ -38,10 +38,10 @@
 #else
 #define CORO_STACK_MIN         (5 * (PTHREAD_STACK_MIN))
 #endif
-
+/*
 static_assert(DEFAULT_BUFFER_SIZE < (CORO_STACK_MIN + PTHREAD_STACK_MIN),
     "Request buffer fits inside coroutine stack");
-
+*/ 
 #define DEFER_MAX		16
 
 typedef struct coro_defer_t_	coro_defer_t;
