@@ -1,6 +1,6 @@
 all:../build/YRSSF
 	
-../build/YRSSF:\
+.dep:\
     classes.hpp.gch       \
     client.hpp.gch        \
     crypt.hpp.gch         \
@@ -24,7 +24,54 @@ all:../build/YRSSF
     ./lua/src/liblua.a    \
     ./leveldb/out-static/libleveldb.a \
     ./lwan/build/common/liblwan.a
-	g++ main.cpp -pthread ./leveldb/out-static/libleveldb.a ./leveldb/out-static/libmemenv.a ./lua/src/liblua.a ./lwan/build/common/liblwan.a ./zlib/libz.a ./aes/aes.o ./sqlite/sqlite3.o -ldl -I ./lua/src -I ./lwan/common -I ./leveldb/include -I ./zlib -I ./aes -I ./ -std=c++0x -ljpeg -lssl -lcrypto -o ../build/YRSSF
+	
+../build/YRSSF : .dep
+	g++ main.cpp                       \
+	 -pthread                          \
+	 ./leveldb/out-static/libleveldb.a \
+	 ./leveldb/out-static/libmemenv.a  \
+	 ./lua/src/liblua.a                \
+	 ./lwan/build/common/liblwan.a     \
+	 ./zlib/libz.a                     \
+	 ./aes/aes.o                       \
+	 ./sqlite/sqlite3.o                \
+	 -ldl                              \
+	 -DWEB1                            \
+	 -I ./lua/src                      \
+	 -I ./lwan/common                  \
+	 -I ./leveldb/include              \
+	 -I ./zlib                         \
+	 -I ./aes                          \
+	 -I ./                             \
+	 -std=c++0x                        \
+	 -ljpeg                            \
+	 -lssl                             \
+	 -lcrypto                          \
+	 -o ../build/YRSSF
+android : .dep
+	g++ -static main.cpp               \
+	 -pthread                          \
+	 ./leveldb/out-static/libleveldb.a \
+	 ./leveldb/out-static/libmemenv.a  \
+	 ./lwan/build/common/liblwan.a     \
+	 ./lua/src/liblua.a                \
+	 ./zlib/libz.a                     \
+	 ./aes/aes.o                       \
+	 ./sqlite/sqlite3.o                \
+	 -Wl,-Bdynamic,-ldl                \
+	 -DWEB2                            \
+	 -I ./lua/src                      \
+	 -I ./leveldb/include              \
+	 -I ./lwan/common                  \
+	 -I ./zlib                         \
+	 -I ./aes                          \
+	 -I ./                             \
+	 -std=c++0x                        \
+	 -Wl,-Bstatic,-ljpeg               \
+	 -Wl,-Bstatic,-lssl                \
+	 -Wl,-Bstatic,-lcrypto             \
+	 -Wl,-Bstatic,-lgcc                \
+	 -o ../build/YRSSF
 ./zlib/libz.a :
 	cd zlib       && make
 ./lwan/build/common/liblwan.a:

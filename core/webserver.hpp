@@ -6,7 +6,6 @@ extern "C"{
 #include "lwan-serve-files.h"
 #include "zlib.h"
 }
-#define NDEBUG
 static lwan_http_status_t ajax(lwan_request_t *request,lwan_response_t *response, void *data){
     int i,l;
     lua_State * L=lua_newthread(yrssf::gblua);

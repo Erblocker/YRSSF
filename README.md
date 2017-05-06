@@ -21,7 +21,8 @@ lock目录下的东西极度危险！极度危险！极度危险！重要的事�
 如果真的make了，在里面`make clean`一下可以解除<u>锁机</u>效果  
 此工具请勿用于非法用途，否则后果自负  
 ## 关于Android编译： ##
-本项目需要下列so文件，请自行准备
+### 动态编译： ###
+本项目需要下列so文件，请自行准备  
 *   Tag        Type                         Name/Value
 *  0x00000001 (NEEDED)                     Shared library: [libdl.so.2]
 *  0x00000001 (NEEDED)                     Shared library: [libjpeg.so.8]
@@ -32,3 +33,5 @@ lock目录下的东西极度危险！极度危险！极度危险！重要的事�
 *  0x00000001 (NEEDED)                     Shared library: [libgcc_s.so.1]
 *  0x00000001 (NEEDED)                     Shared library: [libpthread.so.0]
 *  0x00000001 (NEEDED)                     Shared library: [libc.so.6]
+### 静态编译： ###
+进入core目录，`make android`  
