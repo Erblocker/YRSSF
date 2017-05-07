@@ -5,11 +5,11 @@
 #include <time.h>
 #include <arpa/inet.h>
 namespace yrssf{
-void   int2str(int32_t  * i,char * c){
+void   int2str(const int32_t  * i,char * c){
   sprintf(c, "%8x ", *i);
   c[8]='\0';
 }
-void   str2int(char * c,int32_t  * i){
+void   str2int(const char * c,int32_t  * i){
   sscanf(c,  "%8x",  i); 
 }
 int randnum(){
@@ -28,6 +28,7 @@ char * randstr(){
   for(int i=0;i<16;i++){
     result[i]=arr[randnum() % sizeof(arr)];
   }
+  return result;
 }
 char * nowtime(){
   static char timestr[9];

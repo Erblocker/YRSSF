@@ -1,7 +1,20 @@
 dofile("./lib/base64.lua")
 dofile("./lib/serialize.lua")
 print("initing")
-loadsharedlibs("./std.so")
+print("path:"..APP_PATH)
+function loaduser()
+  local path="./data/user.txt"
+  local file=io.open(path,"r")
+  local uid =hex2num(file:read("*line"))
+  local pwd =file:read("*line")
+  local par =file:read("*line")
+  local port=file:read("*line")+0
+  print("set user:"..uid)
+  setClientUser(uid,pwd)
+  print("set server")
+  changeParentServer(par,port)
+  io.close(file)
+end
 
 function loadcert()
   local path="./data/cert.txt"
@@ -44,4 +57,6 @@ function loadAllowCerts()
 end
 loadcert()
 loadAllowCerts()
+loaduser()
+cryptModeOn()
 print("inited")
