@@ -200,7 +200,7 @@ namespace videolive{
   };
   struct netPack{
     char m;
-    nint32 x,y,w,h;
+    nint32 x,y,w,h,t;
     pixel data[];
   };
   class boardcast{
@@ -208,14 +208,33 @@ namespace videolive{
     shot shotbuf;
     float resizex,resizey;
     pixel buffer[600][500];
+    struct Updatelog{
+      unsigned int times;
+      Updatelog(){
+        times=0;
+      }
+    }updatelog[40][25];
+    unsigned int times;
+    //chunk:
+    //width=15     //15*40
+    //height=20    //20*25
     boardcast(const char * path):shotbuf(path),resizex(1),resizey(1){
       resizex=shotbuf.fb_var_info.xres/600.0f;
       resizey=shotbuf.fb_var_info.yres/500.0f;
+      times=0;
     }
     ~boardcast(){
     }
     void setpixel(pixel * px,int x,int y){
       if(x<0 || y<0 || x>=600 || y>=500) return;
+      int cx=x/15;
+      int cy=y/20;
+      if(
+        buffer[x][y].R!=px->R ||
+        buffer[x][y].G!=px->G ||
+        buffer[x][y].B!=px->B
+      )
+        updatelog[x][y].times=this->times;
       buffer[x][y].R=px->R;
       buffer[x][y].G=px->G;
       buffer[x][y].B=px->B;
@@ -249,6 +268,7 @@ namespace videolive{
           pxl->B=buffer[ix][iy*2+1].B;
           pxl++;
         }
+        bufp->m='w';
         client.live(&nbuf);
       }
     }
@@ -262,12 +282,56 @@ namespace videolive{
         pix=shotbuf.getpix(ix*resizex,iy*resizey);
         if(pix==NULL){
           pix->torgb(&r,&g,&b);
-          buffer[ix][iy].R=r;
-          buffer[ix][iy].G=g;
-          buffer[ix][iy].B=b;
+          buffer[ix][iy].R=r/256;
+          buffer[ix][iy].G=g/256;
+          buffer[ix][iy].B=b/256;
         }
       }
       sendall();
+    }
+    void liveshot(){
+      int ix,iy,jx,jy,j;
+      rgb565 * pix;
+      pixel px;
+      netSource nbuf;
+      char * buf=nbuf.source;
+      nbuf.size=SOURCE_CHUNK_SIZE;
+      void * endp=&(buf[SOURCE_CHUNK_SIZE]);
+      netPack * bufp=(netPack*)buf;
+      for(ix=0;ix<600;ix++)
+      for(iy=0;iy<500;iy++){
+        pix=shotbuf.getpix(ix*resizex,iy*resizey);
+        if(pix==NULL){
+          int r,g,b;
+          pix->torgb(&r,&g,&b);
+          px.R=r/256;
+          px.G=g/256;
+          px.B=b/256;
+          setpixel(&px,ix,iy);
+        }
+      }
+      for(ix=0;ix<40;ix++)
+      for(iy=0;iy<25;iy++){
+        if(updatelog[ix][iy].times==times){
+          bufp->m='i';
+          bufp->x=ix;
+          bufp->y=iy;
+          bufp->t=times;
+          j=0;
+          for(jy=0;jy<20;jy++)
+          for(jx=0;jx<15;jx++){
+            bufp->data[j]=pixel(
+              buffer[jx][jy].R,
+              buffer[jx][jy].G,
+              buffer[jx][jy].B
+            );
+            j++;
+          }
+          client.live(&nbuf);
+        }else
+          continue;
+      }
+      times++;
     }
   };
   class live_f{

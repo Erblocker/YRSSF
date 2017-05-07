@@ -17,6 +17,7 @@ all:../build/YRSSF
     key.hpp.gch           \
     rwmutex.hpp.gch       \
     base64.hpp.gch        \
+    scriptqueue.hpp.gch   \
     main.cpp              \
     sqlite/sqlite3.o      \
     ./zlib/libz.a         \
@@ -85,6 +86,8 @@ android : .dep
 	cd lua && make linux
 sqlite/sqlite3.o : sqlite/sqlite3.c
 	cd sqlite && gcc sqlite3.c -c
+scriptqueue.hpp.gch : scriptqueue.hpp
+	g++ scriptqueue.hpp -std=c++0x
 key.hpp.gch : key.hpp
 	g++ key.hpp
 rwmutex.hpp.gch : rwmutex.hpp

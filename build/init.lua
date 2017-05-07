@@ -58,5 +58,7 @@ end
 loadcert()
 loadAllowCerts()
 loaduser()
+insertIntoQueue("print(\"script queue testing...\")")
+insertIntoQueue("print(\"script queue testing...\")")
 cryptModeOn()
 print("inited")

@@ -42,6 +42,15 @@ class nint32{
 class mywindow{
   public:
   SDL_Surface * surface;
+  struct Updatelog{
+    unsigned int times;
+    Updatelog(){
+      times=0;
+    }
+  }updatelog[40][25];
+  //chunk:
+  //width=15     //15*40
+  //height=20    //20*25
   int width,height;
   mywindow(){
     width=600;
@@ -99,14 +108,33 @@ class connection{
   ~connection(){}
   struct netPack{
     char m;
-    nint32 x,y,w,h;
+    nint32 x,y,w,h,t;
     mywindow::pixel data[];
   };
   void resolv(void * inp){
     netPack * in=(netPack*)inp;
     switch(in->m){
       case 'w':
-        mw.drawbitmap(in->data,in->x(),in->y(),in->w(),in->h(),((char*)in)+4096);
+        mw.drawbitmap(
+          in->data,
+          in->x(),
+          in->y(),
+          in->w(),
+          in->h(),
+          ((char*)in)+4096
+        );
+      break;
+      case 'i':
+        if(mw.updatelog[in->x()][in->y()].times>=in->t()) break;
+        mw.updatelog[in->x()][in->y()].times=in->t();
+        mw.drawbitmap(
+          in->data,
+          in->x()*15,
+          in->y()*20,
+          40,
+          25,
+          ((char*)in)+4096
+        );
       break;
     }
   }

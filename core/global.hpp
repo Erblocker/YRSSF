@@ -13,11 +13,11 @@ extern "C" {
 #define WEB_FLAG_DEF        (lwan_handler_flags_t)(HANDLER_PARSE_COOKIES|HANDLER_PARSE_QUERY_STRING|HANDLER_PARSE_POST_DATA)
 #define WEB_FLAG_UPL        (lwan_handler_flags_t)(HANDLER_PARSE_COOKIES|HANDLER_PARSE_QUERY_STRING)
 #define ysDebug(fmt, ...) \
-  printf("status %s:%d %s() ",__FILE__, __LINE__, __FUNCTION__); \
+  printf("debug: %s:%d %s() ",__FILE__, __LINE__, __FUNCTION__); \
   printf(fmt, ##__VA_ARGS__); \
   printf("\n");
 #define ysError(fmt, ...) \
-  printf("error  %s:%d %s() ",__FILE__, __LINE__, __FUNCTION__); \
+  printf("error: %s:%d %s() ",__FILE__, __LINE__, __FUNCTION__); \
   printf(fmt, ##__VA_ARGS__); \
   printf("\n");
 namespace yrssf{
