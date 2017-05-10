@@ -354,6 +354,10 @@ namespace videolive{
       if(!bd)return;
       bd->sendall();
     }
+    void liveall(){
+      if(!bd)return;
+      bd->liveshot();
+    }
     void save(const char * path){
       if(!bd)return;
       bd->shotbuf.save(path);
