@@ -1,16 +1,26 @@
+function codefilter(str)
+  local str2=string.gsub(str,"\"","")
+  str2=string.gsub(str,"\\","")
+  return str2
+end
 function download(sname,path)
-  updatekey()
-  clientDownload(sname,path)
+  local s
+  local p
+  insertIntoQueue("updatekey() \n"..
+  "clientDownload(\""..s.."\" , \""..p.."\") ")
 end
 
 function upload(sname,path)
-  updatekey()
-  clientUpload(sname,path)
+  local s
+  local p
+  insertIntoQueue("updatekey() \n"..
+  "clientUpload( \""..s.."\" , \""..p.."\" ) ")
 end
 
 function del(sname)
-  updatekey()
-  clientDownload(sname)
+  local s
+  insertIntoQueue("updatekey() \n"..
+  "clientDownload(\""..s.."\") ")
 end
 local src_root=APP_PATH.."/static/mysrc/"
 if GET["sname"] then

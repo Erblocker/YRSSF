@@ -23,10 +23,11 @@ lock目录下的东西极度危险！极度危险！极度危险！重要的事�
 ## 编译： ##
 ### Linux: ###
 ` $ git clone https://github.com/cgoxopx/YRSSF `  
-` $ cd YRSSF && make `
+` $ cd YRSSF && make `  
 ` $ cd core  && make `  
 ` $ cd ../launcher && make `  
 ` $ cd ../build `  
+最后执行项目  
 ` $ ./launcher `  
 ### Android编译： ###
 #### 动态编译： ####

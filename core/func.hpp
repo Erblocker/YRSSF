@@ -24,7 +24,9 @@ int randnum(){
 char * randstr(){
   static char result[17];
   result[16]='\0';
-  char arr[]="xcvbnm,.asdfghjkl;'qwertyuiop1234567890~`/[]{}";
+  char arr[]="xcvbnmasdfghjklqwertyuiop"
+             "1234567890ZXCVBNMASDFGHJK"
+             "LQWERTYUIOP";
   for(int i=0;i<16;i++){
     result[i]=arr[randnum() % sizeof(arr)];
   }

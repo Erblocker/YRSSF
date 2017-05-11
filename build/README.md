@@ -41,6 +41,7 @@
 ## 网络相关
 ### boardcastScreenInit
 ### boardcastScreen
+### liveScreen
 ### boardcastScreenDestory
 ### screenShot
 ### liveadd
