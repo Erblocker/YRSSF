@@ -16,10 +16,10 @@ YRSSF
 /core/lwan/build/*
 /core/leveldb/out-shared/*
 /core/leveldb/out-static/*
-/build/data*
-/build/live*
+/build/data/*/*
+/build/live/*
 /build/live-client
 /build/launcher
 /build/daemon
 /build/lock
-/test*
+/test/*
