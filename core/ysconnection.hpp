@@ -807,7 +807,7 @@ class ysConnection:public serverBase{
 *get server info
 *do something......
 */
-    ysDebug("login");
+    //ysDebug("login");
     netQuery  qypk;
     netSource buf;
     int      i,rdn;
@@ -826,14 +826,14 @@ class ysConnection:public serverBase{
     wristr(mypassword,qypk.str1);
     //qypk.header.globalMode=globalmode;
     
-    ysDebug("query init");
+    //ysDebug("query init");
     
     rdn=randnum();
     qypk.header.unique=rdn;
     
     if(iscrypt)crypt_encode(&qypk,&key);
     
-    ysDebug("send query");
+    //ysDebug("send query");
     
     for(i=0;i<10;i++){
       send(parIP,parPort,&qypk,sizeof(qypk));
@@ -856,7 +856,7 @@ class ysConnection:public serverBase{
     return 0;
     loginloop1end:
     
-    ysDebug("get server info");
+    //ysDebug("get server info");
     
     bzero(&qypk,sizeof(qypk));
     bzero(&buf ,sizeof(buf ));
@@ -869,7 +869,7 @@ class ysConnection:public serverBase{
     
     if(iscrypt)crypt_encode(&qypk,&key);
     
-    ysDebug("send query");
+    //ysDebug("send query");
     
     for(i=0;i<10;i++){
       send(parIP,parPort,&qypk,sizeof(qypk));

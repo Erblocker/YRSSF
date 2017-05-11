@@ -6,6 +6,7 @@
 #include <sys/ioctl.h>
 #include <jpeglib.h>
 #include <jerror.h>
+#include <sys/soundcard.h>
 namespace yrssf{
 int livefifo;
 int liveserverfifo;
@@ -61,6 +62,44 @@ static void * liveserver(void *){
   }
 }
 namespace videolive{
+  class Sound{
+    int fd;
+    public:
+    char buffer[3584];
+    Sound(const char * path){
+      fd = open(path, O_RDONLY);
+      if(fd < 0){
+      printf("can not open dev\n");
+        return;
+      }
+      int i;
+      //设置参数
+      i=0;
+      ioctl (fd,SNDCTL_DSP_STEREO,&i);                //单声道
+      ioctl (fd,SNDCTL_DSP_RESET,(char *)&i) ;
+      ioctl (fd,SNDCTL_DSP_SYNC,(char *)&i);
+      i=1;
+      ioctl (fd,SNDCTL_DSP_NONBLOCK,(char *)&i);
+      i=8000;
+      ioctl (fd,SNDCTL_DSP_SPEED,(char *)&i);         //频率
+      i=1;
+      ioctl (fd,SNDCTL_DSP_CHANNELS,(char *)&i);
+      i=8;
+      ioctl (fd,SNDCTL_DSP_SETFMT,(char *)&i);
+      i=3;
+      ioctl (fd,SNDCTL_DSP_SETTRIGGER,(char *)&i);
+      i=3;
+      ioctl (fd,SNDCTL_DSP_SETFRAGMENT,(char *)&i);
+      i=1;
+      ioctl (fd,SNDCTL_DSP_PROFILE,(char *)&i);
+    }
+    ~Sound(){
+      if(fd>=0)close(fd);
+    }
+    void readbuffer(){
+      if(fd) read(fd,buffer,3584);
+    }
+  };
   struct rgb565{
     unsigned short int pix565;
     void torgb(int * r,int * g,int * b){
@@ -80,7 +119,7 @@ namespace videolive{
       fd = open(path, O_RDONLY);
       if(fd < 0){
       printf("can not open dev\n");
-        exit(1);
+        return;
       }
       // 获取LCD的可变参数
       ioctl(fd, FBIOGET_VSCREENINFO, &fb_var_info);

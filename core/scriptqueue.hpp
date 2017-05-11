@@ -27,8 +27,10 @@ namespace yrssf{
       if(q.empty())return 0;
       lua_State * L=lua_newthread(gblua);
       locker.lock();
-      std::string & str=q.front();
+      std::string str=q.front();
       script=str.c_str();
+      q.pop();
+      locker.unlock();
       if(luaL_loadbuffer(
           L,
           script,
@@ -39,8 +41,6 @@ namespace yrssf{
         if(lua_isstring(L,-1))
           ysDebug("%s",lua_tostring(L,-1));
       }
-      q.pop();
-      locker.unlock();
       return 1;
     }
     void stop(){
