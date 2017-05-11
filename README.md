@@ -22,21 +22,23 @@ lock目录下的东西极度危险！极度危险！极度危险！重要的事�
 此工具请勿用于非法用途，否则后果自负  
 ## 编译： ##
 ### Linux: ###
+#### 下载并编译：  
 ` $ git clone https://github.com/cgoxopx/YRSSF `  
 ` $ cd YRSSF && make `  
 ` $ cd core  && make `  
 ` $ cd ../launcher && make `  
 ` $ cd ../build `  
-让系统重新生成密钥：  
+#### 让系统重新生成密钥：  
 ` $ rm data/cert.txt `生成后第一行是公钥，第二行是私钥  
-添加信任的公钥：  
+#### 添加信任的公钥：  
 ` $ echo "public key" >> data/allowcert.txt`  
-设置用户名：  
+#### 设置用户名：  
 ` $ vim data/user.txt`  
-最后运行项目：  
+#### 最后运行项目：  
 ` $ ./launcher `  
-结束进程：  
+#### 结束进程：  
 ` $ killall YRSSF launcher daemon`  
+launcher和daemon会相互保护，单独结束其中任意一个都会被另一个复活  
 ### Android编译： ###
 #### 动态编译： ####
 本项目需要下列so文件，请自行准备  
