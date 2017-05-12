@@ -485,6 +485,19 @@ class API{
       config::AllowShell=0;
       return 0;
     });
+    lua_register(L,"boardcastSoundInit",[](lua_State * L){
+      if(!lua_isstring(L,1))return 0;
+      videolive::screen.initSound(lua_tostring(L,1));
+      return 0;
+    });
+    lua_register(L,"boardcastSound",[](lua_State * L){
+      videolive::screen.sendsound();
+      return 0;
+    });
+    lua_register(L,"boardcastSoundDestory",[](lua_State * L){
+      videolive::screen.destorySound();
+      return 0;
+    });
     lua_register(L,"boardcastScreenInit",[](lua_State * L){
       if(!lua_isstring(L,1))return 0;
       videolive::screen.init(lua_tostring(L,1));

@@ -41,8 +41,11 @@
 ## 网络相关
 ### boardcastScreenInit
 ### boardcastScreen
-### liveScreen
 ### boardcastScreenDestory
+### boardcastSoundInit
+### boardcastSound
+### boardcastSoundDestory
+### liveScreen
 ### screenShot
 ### liveadd
 ### liveclean

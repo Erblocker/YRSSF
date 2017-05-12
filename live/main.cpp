@@ -8,6 +8,7 @@
 #include <sys/wait.h>
 #include <sys/param.h>
 #include <sys/prctl.h>
+#include <sys/soundcard.h>
 #include <unistd.h>
 #include "shot.hpp"
 const char serverpipe[]="live/server";
@@ -39,6 +40,66 @@ class nint32{
     return val();
   }
 };
+class Sound{
+    int fd;
+    public:
+    int times;
+    char buffer[3584];
+    void init(const char * path){
+      times=0;
+      fd = open(path, O_RDWR);
+      if(fd < 0){
+      printf("can not open dev\n");
+        return;
+      }
+      int i;
+      //设置参数
+      i=0;
+      ioctl (fd,SNDCTL_DSP_STEREO,&i);                //单声道
+      ioctl (fd,SNDCTL_DSP_RESET,(char *)&i) ;
+      ioctl (fd,SNDCTL_DSP_SYNC,(char *)&i);
+      i=1;
+      ioctl (fd,SNDCTL_DSP_NONBLOCK,(char *)&i);
+      i=8000;
+      ioctl (fd,SNDCTL_DSP_SPEED,(char *)&i);         //频率
+      i=1;
+      ioctl (fd,SNDCTL_DSP_CHANNELS,(char *)&i);
+      i=8;
+      ioctl (fd,SNDCTL_DSP_SETFMT,(char *)&i);
+      i=3;
+      ioctl (fd,SNDCTL_DSP_SETTRIGGER,(char *)&i);
+      i=3;
+      ioctl (fd,SNDCTL_DSP_SETFRAGMENT,(char *)&i);
+      i=1;
+      ioctl (fd,SNDCTL_DSP_PROFILE,(char *)&i);
+    }
+    Sound(){
+      init("/dev/dsp");
+    }
+    Sound(const char * path){
+      init(path);
+    }
+    ~Sound(){
+      if(fd>=0)close(fd);
+    }
+    void readbuffer(){
+      if(fd){
+        bzero(buffer,3584);
+        read (fd,buffer,3584);
+      }
+    }
+    void display(){
+      if(fd) write(fd,buffer,3584);
+    }
+    void display(const void * d){
+      bzero(buffer,3584);
+      const char * dd=(const char *)d;
+      for(int i=0;i<3584;i++){
+        buffer[i]=dd[i];
+      }
+      display();
+    }
+}sound;
 class mywindow{
   public:
   SDL_Surface * surface;
@@ -135,6 +196,11 @@ class connection{
           25,
           ((char*)in)+4096
         );
+      break;
+      case 's':
+        if(sound.times>=in->t()) break;
+        sound.times=in->t();
+        sound.display(in->data);
       break;
     }
   }

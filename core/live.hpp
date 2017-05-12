@@ -67,7 +67,7 @@ namespace videolive{
     public:
     char buffer[3584];
     Sound(const char * path){
-      fd = open(path, O_RDONLY);
+      fd = open(path, O_RDWR);
       if(fd < 0){
       printf("can not open dev\n");
         return;
@@ -97,7 +97,13 @@ namespace videolive{
       if(fd>=0)close(fd);
     }
     void readbuffer(){
-      if(fd) read(fd,buffer,3584);
+      if(fd){
+        bzero(buffer,3584);
+        read (fd,buffer,3584);
+      }
+    }
+    void display(){
+      if(fd) write(fd,buffer,3584);
     }
   };
   struct rgb565{
@@ -244,7 +250,7 @@ namespace videolive{
   };
   class boardcast{
     public:
-    shot shotbuf;
+    shot  shotbuf;
     float resizex,resizey;
     pixel buffer[600][500];
     struct Updatelog{
@@ -373,8 +379,35 @@ namespace videolive{
       times++;
     }
   };
+  class sound{
+    unsigned int times;
+    Sound soundbuf;
+    public:
+    sound(const char * path):soundbuf(path){
+      times=0;
+    }
+    void sendsound(){
+      times++;
+      netSource nbuf;
+      int i;
+      char * buf=nbuf.source;
+      nbuf.size=SOURCE_CHUNK_SIZE;
+      void * endp=&(buf[SOURCE_CHUNK_SIZE]);
+      netPack * bufp=(netPack*)buf;
+      bufp->m='s';
+      bufp->t=times;
+      char * sp=(char*)bufp->data;
+      soundbuf.readbuffer();
+      for(i=0;i<3584;i++){
+        *sp=soundbuf.buffer[i];
+        sp++;
+      }
+      client.live(&nbuf);
+    }
+  };
   class live_f{
     boardcast * bd;
+    sound     * sd;
     public:
     live_f(){
       bd=NULL;
@@ -383,11 +416,20 @@ namespace videolive{
       if(bd)delete bd;
     }
     void init(const char * path){
+      if(bd!=NULL) return;
       bd=new boardcast(path);
+    }
+    void initSound(const char * path){
+      if(sd!=NULL) return;
+      sd=new sound(path);
     }
     void destory(){
       if(bd)delete bd;
       bd=NULL;
+    }
+    void destorySound(){
+      if(sd)delete sd;
+      sd=NULL;
     }
     void sendall(){
       if(!bd)return;
@@ -400,6 +442,10 @@ namespace videolive{
     void save(const char * path){
       if(!bd)return;
       bd->shotbuf.save(path);
+    }
+    void sendsound(){
+      if(!bd)return;
+      sd->sendsound();
     }
   }screen;
 }
