@@ -18,6 +18,7 @@ all:../build/YRSSF
     rwmutex.hpp.gch       \
     base64.hpp.gch        \
     scriptqueue.hpp.gch   \
+    cache.hpp.gch         \
     main.cpp              \
     sqlite/sqlite3.o      \
     ./zlib/libz.a         \
@@ -96,6 +97,8 @@ base64.hpp.gch : base64.hpp
 	g++ base64.hpp
 lwan-build-config.h.gch : lwan-build-config.h
 	g++ lwan-build-config.h
+cache.hpp.gch : cache.hpp
+	g++ cache.hpp -std=c++0x
 classes.hpp.gch : classes.hpp
 	g++ classes.hpp -std=c++0x
 client.hpp.gch : client.hpp

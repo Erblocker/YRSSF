@@ -3,10 +3,6 @@
 #include <errno.h>
 #include <netdb.h>
 #include <stdarg.h>
-#include <thread>
-#include <mutex>
-#include <atomic>
-#include <condition_variable>
 #include <memory>
 extern "C" {
 #include "lua/src/lua.h"
@@ -52,6 +48,7 @@ extern "C" {
 #include "live.hpp"
 #include "webserver.hpp"
 #include "scriptqueue.hpp"
+#include "cache.hpp"
 namespace yrssf{
 ///////////////////////////////////
 sqlite3  * db;
@@ -73,7 +70,12 @@ class Lglobal{
   int read(lua_State * L){
     if(!lua_isstring(L,1))return 0;
     locker.Rlock();
-    std::string & s=m[lua_tostring(L,1)];
+    auto it=m.find(lua_tostring(L,1));
+    if(it==m.end()){
+      locker.unlock();
+      return 0;
+    }
+    std::string & s=it->second;
     lua_pushstring(L,s.c_str());
     locker.unlock();
     return 1;
@@ -380,6 +382,9 @@ class API{
     lua_register(L,"getkey",              lua_getkey);
     lua_register(L,"setkey",              lua_setkey);
     lua_register(L,"runsql",              runsql);
+    lua_register(L,"cache_read",          cache::read);
+    lua_register(L,"cache_set",           cache::set);
+    lua_register(L,"cache_delete",        cache::del);
     lua_register(L,"GLOBAL_read",[](lua_State * L){
       return lglobal.read(L);
     });
@@ -677,7 +682,7 @@ class Automanager{
       }
       delete it;
       yrssf::ysDB.unique->ReleaseSnapshot(options.snapshot);
-      ysDebug("free %d unique id",num);
+      //ysDebug("free %d unique id",num);
     }
   }
   static void * freemems(void*){
@@ -692,6 +697,7 @@ class Automanager{
     bzero(times, sizeof(int)*24);
     while(1){
       sleep(3600);
+      yrssf::cache::freetrash();
       timer=time(NULL);
       struct tm *ptr  =localtime(&timer);
       nowhour         =ptr->tm_hour;
@@ -706,7 +712,7 @@ class Automanager{
         yrssf::pool.freeone();
         i++;
       }
-      ysDebug("free %d memory block",i);
+      //ysDebug("free %d memory block",i);
     }
   }
   public:
