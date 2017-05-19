@@ -1,5 +1,6 @@
 dofile("./lib/base64.lua")
 dofile("./lib/serialize.lua")
+dofile("./lib/install.lua")
 print("initing")
 print("path:"..APP_PATH)
 function loadcert()

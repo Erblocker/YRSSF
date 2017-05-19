@@ -12,5 +12,11 @@ function loaduser()
   io.close(file)
 end
 
+checkSignOn()
+----把上面的On改成Off，程序将不会验证签名
+----注意：此操作有安全隐患
+----建议不要进行此操作
+----本程序使用的公钥又不给钱，何苦呢？
+
 loaduser()
 cryptModeOn()

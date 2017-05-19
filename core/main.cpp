@@ -48,6 +48,7 @@ extern "C" {
 #include "live.hpp"
 #include "webserver.hpp"
 #include "scriptqueue.hpp"
+#include "scriptworker.hpp"
 #include "cache.hpp"
 namespace yrssf{
 ///////////////////////////////////
@@ -84,7 +85,8 @@ class Lglobal{
     if(!lua_isstring(L,1))return 0;
     locker.Wlock();
     auto it=m.find(lua_tostring(L,1));
-    m.erase(it);
+    if(it!=m.end())
+      m.erase(it);
     locker.unlock();
     return 0;
   }
@@ -95,6 +97,7 @@ class API{
   API(){
     db=NULL;
     ysDebug("\033[40;43mYRSSF:\033[0mdatabase loading...\n");
+    sqlite3_config(SQLITE_CONFIG_MULTITHREAD);
     int ret = sqlite3_open("./data/yrssf.db", &db);
     if( ret != SQLITE_OK ) {
       ysDebug("can not open %s \n", sqlite3_errmsg(db));
@@ -178,13 +181,13 @@ class API{
     runsqlcbs * data=(runsqlcbs*)d;
     lua_State * L=data->lua;
     lua_createtable(L,col_count,0);//create new array
-    lua_rawseti(L,-2,data->i);
     lua_pushnumber(L,-1);
     lua_rawseti(L,-2,0);  //fill array[i][0]
     for(int i=0;i<col_count;i++){
       lua_pushstring(L,col_values[i]);
       lua_rawseti(L,-2,i+1);
     }
+    lua_rawseti(L,-2,data->i);
     data->i++;
     return 0;
   }
@@ -385,6 +388,29 @@ class API{
     lua_register(L,"cache_read",          cache::read);
     lua_register(L,"cache_set",           cache::set);
     lua_register(L,"cache_delete",        cache::del);
+    lua_register(L,"worker",              sworker::create);
+    /*
+    lua_register(L,"gethostbyname",[](lua_State * L){
+      if(!lua_isstring(L,1)) return 0;
+      static std::mutex lk;
+      lk.lock();
+      lua_pushstring(L,
+        inet_ntcp(
+          gethostbyname(lua_tostring(L,1))->h_addr_list
+        )
+      );
+      lk.unlock();
+      return 1;
+    });
+    */
+    lua_register(L,"nodeModeOn",[](lua_State * L){
+      config::nodemode=1;
+      return 0;
+    });
+    lua_register(L,"nodeModeOff",[](lua_State * L){
+      config::nodemode=0;
+      return 0;
+    });
     lua_register(L,"GLOBAL_read",[](lua_State * L){
       return lglobal.read(L);
     });

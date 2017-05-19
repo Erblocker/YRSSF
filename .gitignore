@@ -17,9 +17,11 @@ YRSSF
 /core/leveldb/out-shared/*
 /core/leveldb/out-static/*
 /build/data/*/*
+/build/data/yrssf.db
 /build/live/*
 /build/live-client
 /build/launcher
 /build/daemon
 /build/lock
+/build/install.lock
 /test/*

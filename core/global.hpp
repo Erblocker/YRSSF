@@ -21,12 +21,13 @@ extern "C" {
   printf(fmt, ##__VA_ARGS__); \
   printf("\n");
 namespace yrssf{
-namespace config{
-  bool AllowShell=0;
-  bool checkSign=0;
-}
-lua_State * gblua;
-std::mutex clientlocker;
-bool clientdisabled=0;
+  namespace config{
+    bool AllowShell =0;
+    bool checkSign  =0;
+    bool nodemode   =0;
+  }
+  lua_State * gblua;
+  std::mutex clientlocker;
+  bool clientdisabled=0;
 }
 #endif

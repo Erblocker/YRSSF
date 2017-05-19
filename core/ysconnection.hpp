@@ -749,10 +749,7 @@ class ysConnection:public serverBase{
         
         wristr(source->title,respk.title);
         
-        for(std::list<location>::iterator it=ysDB.livelist.begin();it!=ysDB.livelist.end();it++){
-          for(i=0;i<4;i++)
-            send(it->ip,it->port,&respk,sizeof(respk));
-        }
+        livesrc(&respk,0);
         
       break;
       case _CONNECTUSER:
@@ -892,6 +889,24 @@ class ysConnection:public serverBase{
     return 0;
     loginloop2end:
     return run(parIP,parPort,&buf);
+  }
+  virtual void livesrc(netSource * respk,bool reconf){
+    int i;
+    if(reconf){
+        
+        respk->header.userid=myuserid;
+        for(i=0;i<16;i++)
+          respk->header.password[i]=mypassword[i];
+        
+        respk->header.unique=randnum();
+        
+        respk->header.mode=_LIVE;
+        respk->header.crypt='f';
+    }
+    for(std::list<location>::iterator it=ysDB.livelist.begin();it!=ysDB.livelist.end();it++){
+      for(i=0;i<4;i++)
+        send(it->ip,it->port,&respk,sizeof(respk));
+    }
   }
 };
 }

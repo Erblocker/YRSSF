@@ -18,6 +18,7 @@ all:../build/YRSSF
     rwmutex.hpp.gch       \
     base64.hpp.gch        \
     scriptqueue.hpp.gch   \
+    scriptworker.hpp.gch  \
     cache.hpp.gch         \
     main.cpp              \
     sqlite/sqlite3.o      \
@@ -103,6 +104,8 @@ classes.hpp.gch : classes.hpp
 	g++ classes.hpp -std=c++0x
 client.hpp.gch : client.hpp
 	g++ client.hpp -I ./leveldb/include -std=c++0x
+scriptworker.hpp.gch : scriptworker.hpp
+	g++ scriptworker.hpp -std=c++0x
 crypt.hpp.gch : crypt.hpp
 	g++ crypt.hpp -std=c++0x
 daemon.hpp.gch : daemon.hpp

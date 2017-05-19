@@ -20,7 +20,8 @@ elseif GET["swt"]=="boardcast" then
   boardcastScreen()
 elseif GET["swt"]=="intime" then
   GLOBAL_set("live_status","true")
-  insertIntoQueue("dofile(\"plan/live.lua\")")
+  worker("dofile(\"plan/live_s.lua\")")
+  worker("dofile(\"plan/live_v.lua\")")
 elseif GET["swt"]=="intimeshut" then
   GLOBAL_delete("live_status")
 end

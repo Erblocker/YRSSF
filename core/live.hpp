@@ -102,6 +102,12 @@ namespace videolive{
         read (fd,buffer,3584);
       }
     }
+    void readbuffer(void * buf){
+      if(fd){
+        bzero(buffer,3584);
+        read (fd,buf,3584);
+      }
+    }
     void display(){
       if(fd) write(fd,buffer,3584);
     }
@@ -397,11 +403,13 @@ namespace videolive{
       bufp->m='s';
       bufp->t=times;
       char * sp=(char*)bufp->data;
-      soundbuf.readbuffer();
+      soundbuf.readbuffer(sp);
+      /*
       for(i=0;i<3584;i++){
         *sp=soundbuf.buffer[i];
         sp++;
       }
+      */
       client.live(&nbuf);
     }
   };

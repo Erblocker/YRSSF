@@ -195,6 +195,11 @@ class Client:public Server{
       send(parIP,parPort,&qypk,sizeof(qypk));
   }
   void live(netSource * qypk){
+    if(config::nodemode){
+      server.livesrc(qypk,1);
+      return ;
+    }
+    
     uint32_t  len;
     int i;
     

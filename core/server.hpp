@@ -40,8 +40,8 @@ class requirePool{
     }
     ~requirePool(){
       if(req) delete req;
-      ysDebug("mallocCount=%d",mallocCount);
-      ysDebug("usingCount=%d",usingCount);
+      ysDebug("server:mallocCount=%d",mallocCount);
+      ysDebug("server:usingCount=%d",usingCount);
       ysDebug("free pool");
     }
     require * get(){

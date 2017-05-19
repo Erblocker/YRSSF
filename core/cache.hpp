@@ -73,7 +73,8 @@ namespace yrssf{
       if(!lua_isstring(L,1))return 0;
       locker.Wlock();
       auto it=cache.find(lua_tostring(L,1));
-      cache.erase(it);
+      if(it!=cache.end())
+        cache.erase(it);
       locker.unlock();
       return 0;
     }
