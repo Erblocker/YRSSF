@@ -26,6 +26,7 @@ all:../build/YRSSF
     ./aes/aes.o           \
     ./lua/src/liblua.a    \
     ./leveldb/out-static/libleveldb.a \
+    lua-cjson/lua_cjson.o             \
     ./lwan/build/common/liblwan.a
 	
 ../build/YRSSF : .dep
@@ -37,6 +38,9 @@ all:../build/YRSSF
 	 ./lwan/build/common/liblwan.a     \
 	 ./zlib/libz.a                     \
 	 ./aes/aes.o                       \
+	 ./lua-cjson/lua_cjson.o           \
+	 ./lua-cjson/strbuf.o              \
+	 ./lua-cjson/fpconv.o              \
 	 ./sqlite/sqlite3.o                \
 	 -ldl                              \
 	 -DWEB1                            \
@@ -60,6 +64,9 @@ android : .dep
 	 ./lua/src/liblua.a                \
 	 ./zlib/libz.a                     \
 	 ./aes/aes.o                       \
+	 ./lua-cjson/lua_cjson.o           \
+	 ./lua-cjson/strbuf.o              \
+	 ./lua-cjson/fpconv.o              \
 	 ./sqlite/sqlite3.o                \
 	 -Wl,-Bdynamic,-ldl                \
 	 -DWEB2                            \
@@ -128,12 +135,15 @@ ysconnection.hpp.gch : ysconnection.hpp
 	g++ ysconnection.hpp -I ./leveldb/include -std=c++0x
 ysdb.hpp.gch : ysdb.hpp
 	g++ ysdb.hpp -I ./leveldb/include -std=c++0x
+lua-cjson/lua_cjson.o :
+	cd lua-cjson && make
 clean:
 	-rm *.gch
 	-rm ../build/YRSSF
 	-rm sqlite/sqlite3.o
-	cd zlib    && make clean
-	cd aes     && make clean
-	cd lua     && make clean
-	cd leveldb && make clean
+	cd zlib      && make clean
+	cd aes       && make clean
+	cd lua       && make clean
+	cd lua-cjson && make clean
+	cd leveldb   && make clean
 	-rm -rf lwan/build

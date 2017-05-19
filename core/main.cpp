@@ -50,6 +50,7 @@ extern "C" {
 #include "scriptqueue.hpp"
 #include "scriptworker.hpp"
 #include "cache.hpp"
+extern "C" int luaopen_cjson(lua_State *l);
 namespace yrssf{
 ///////////////////////////////////
 sqlite3  * db;
@@ -613,6 +614,7 @@ class API{
     });
     lua_register(L,"setServerUser",lua_ssu);
     lua_register(L,"setClientUser",lua_scu);
+    luaopen_cjson(L);
   }
 }api;
 class Init{
