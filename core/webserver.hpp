@@ -35,7 +35,7 @@ static lwan_http_status_t ajax(lwan_request_t *request,lwan_response_t *response
     lua_setglobal(L,"ORIGINAL_URL");
     const char * message;
     const static char Emessage[]="NULL";
-    response->mime_type = "text/html;charset=utf-8";
+    response->mime_type = "text/json;charset=utf-8";
     response->headers   = headers;
     lua_createtable(L,0,request->query_params.len);
     for(i=0;i<request->query_params.len;i++){

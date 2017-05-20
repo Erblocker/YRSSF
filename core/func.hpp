@@ -523,6 +523,8 @@ int luaopen_ysfunc(lua_State * L){
     {"BPHash",lua_BPHash},
     {"FNVHash",lua_FNVHash},
     {"APHash",lua_APHash},
+    {"GeohashEncode",lua_geohash_encode},
+    {"GeohashDecode",lua_geohash_decode},
     {NULL,NULL}
   };
   lua_newtable(L);

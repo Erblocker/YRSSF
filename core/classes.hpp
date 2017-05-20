@@ -59,6 +59,8 @@ struct netHeader{
   char     crypt;
   nint32   userid;
   int32_t  unique;
+  nint32   len;
+  nint32   hash;
   char     password[16];
   char     mode;
   char     globalMode;
