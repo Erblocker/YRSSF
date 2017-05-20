@@ -19,6 +19,7 @@ all:../build/YRSSF
     base64.hpp.gch        \
     scriptqueue.hpp.gch   \
     scriptworker.hpp.gch  \
+    languagesolver.hpp.gch\
     cache.hpp.gch         \
     main.cpp              \
     sqlite/sqlite3.o      \
@@ -137,6 +138,8 @@ ysdb.hpp.gch : ysdb.hpp
 	g++ ysdb.hpp -I ./leveldb/include -std=c++0x
 lua-cjson/lua_cjson.o :
 	cd lua-cjson && make
+languagesolver.hpp.gch : languagesolver.hpp
+	g++ languagesolver.hpp -std=c++0x
 clean:
 	-rm *.gch
 	-rm ../build/YRSSF

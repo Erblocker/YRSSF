@@ -50,6 +50,7 @@ extern "C" {
 #include "scriptqueue.hpp"
 #include "scriptworker.hpp"
 #include "cache.hpp"
+#include "languagesolver.hpp"
 extern "C" int luaopen_cjson(lua_State *l);
 namespace yrssf{
 ///////////////////////////////////
@@ -615,6 +616,8 @@ class API{
     lua_register(L,"setServerUser",lua_ssu);
     lua_register(L,"setClientUser",lua_scu);
     luaopen_cjson(L);
+    langsolver::luaopen(L);
+    luaopen_ysfunc(L);
   }
 }api;
 class Init{

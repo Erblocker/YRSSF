@@ -1,5 +1,7 @@
 #ifndef yrssf_core_webserver
 #define yrssf_core_webserver
+#define WEB_FLAG_DEF        (lwan_handler_flags_t)(HANDLER_PARSE_COOKIES|HANDLER_PARSE_QUERY_STRING|HANDLER_PARSE_POST_DATA)
+#define WEB_FLAG_UPL        (lwan_handler_flags_t)(HANDLER_PARSE_COOKIES|HANDLER_PARSE_QUERY_STRING)
 #include "client.hpp"
 extern "C"{
 #include "lwan.h"
@@ -72,7 +74,7 @@ static lwan_http_status_t ajax(lwan_request_t *request,lwan_response_t *response
       return HTTP_OK;
     }
 }
-static lwan_http_status_t upload_b(lwan_request_t *request,lwan_response_t *response, void *data,const char * luapath){
+static lwan_http_status_t upload_b(lwan_request_t *request,lwan_response_t *response, void *data,const char * luapath,bool unzip){
     int  fd;
     int l,i;
     static int cnum=0;
@@ -80,24 +82,39 @@ static lwan_http_status_t upload_b(lwan_request_t *request,lwan_response_t *resp
     char path[PATH_MAX];
     const static char Emessage[]="<error>NULL</error>";
     const char * message;
-    if(UNLIKELY(request->header.body==NULL))
+    if(UNLIKELY(request->header.body==NULL)){
+      //ysDebug("err");
       return HTTP_INTERNAL_ERROR;
+    }
     sprintf(
       path,
       "/tmp/yrssf_upload_%d_%d",
       yrssf::randnum(),
       cnum
     );
+    char * value=request->header.body->value;
+    unsigned int len=request->header.body->len;
+    bool iszip=0;
     fd=open(path,O_RDWR|O_CREAT);
+    //zip
+    if(unzip && len>4){
+      int b1=value[0];
+      int b2=value[1];
+      if(((b1 & 0xff)|((b2 & 0xff)<<8))==0x8b1f){
+        iszip=1;
+      }
+    }
     write(
       fd,
-      request->header.body->value,
-      request->header.body->len
+      value,
+      len
     );
     close(fd);
     lua_State * L=lua_newthread(yrssf::gblua);
     lua_pushstring(L,path);
     lua_setglobal(L,"FILE_PATH");
+    lua_pushboolean(L,iszip);
+    lua_setglobal(L,"FILE_IS_ZIP");
     lua_createtable(L,0,request->cookies.len);
     for(i=0;i<request->cookies.len;i++){
       lua_pushstring(L, request->cookies.base[i].key);
@@ -131,10 +148,10 @@ static lwan_http_status_t upload_b(lwan_request_t *request,lwan_response_t *resp
     }
 }
 static lwan_http_status_t xmlRPC(lwan_request_t *request,lwan_response_t *response, void *data){
-    return upload_b(request,response,data,"xmlRPC.lua");
+    return upload_b(request,response,data,"xmlRPC.lua",1);
 }
 static lwan_http_status_t uploader(lwan_request_t *request,lwan_response_t *response, void *data){
-    return upload_b(request,response,data,"uploader.lua");
+    return upload_b(request,response,data,"uploader.lua",0);
 }
 void webserverRun(){
     struct lwan_serve_files_settings_t sfile;

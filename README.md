@@ -1,5 +1,5 @@
 # [YRSSF](https://github.com/cgoxopx/YRSSF)  #
-这是一个p2p架构的 云教学系统/直播平台框架  
+这是一个p2p架构的 云教学系统/直播平台框架（CMS）  
 ## 特点： ##
 *  基于UDP协议,并且可以通讯加密（虽然是使用web界面来管理，并且目前不支持https……）  
 *  内置内网穿透（废话，不然怎么<u>P2P</u>）  
@@ -12,6 +12,7 @@
 *  操作系统兼容POSIX，比如Android,Linux。  
 *  可通过web管理（<u>但是不能https</u>）  
 *  目前尚不支持Windows，可通过VNC来使用Windows程序  
+*  目前http上传文件有bug，会出现413错误。上传文件请直接使用自带的协议  
 ## 文档：  ##
 [APIs](build)  
 ## 警告：  ##
