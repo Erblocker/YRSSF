@@ -1,6 +1,7 @@
 #ifndef yrssf_core_scriptworker
 #define yrssf_core_scriptworker
 #include "global.hpp"
+#include "threadpool.hpp"
 #include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -11,7 +12,6 @@ namespace yrssf{
   namespace sworker{
     class worker{
       public:
-      pthread_t thread;
       std::string  str;
       worker(){
       }
@@ -36,10 +36,7 @@ namespace yrssf{
       if(!lua_isstring(L,1))return 0;
       auto * m=new worker;
       m->str=lua_tostring(L,1);
-      if(pthread_create(&m->thread,NULL,create_s,m)!=0){
-        perror("pthread_create");
-        return 0;
-      }
+      threadpool::add(create_s,m);
       return 0;
     }
   }

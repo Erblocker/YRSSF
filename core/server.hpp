@@ -2,6 +2,7 @@
 #define yrssf_core_server
 #include "ysconnection.hpp"
 #include "ysdb.hpp"
+#include "threadpool.hpp"
 #include <stack>
 #include <map>
 #include "classes.hpp"
@@ -113,9 +114,10 @@ class Server:public ysConnection{
     while(isrunning){
       if(!wait_for_data(1,0))continue;
       if(recv(&(r->from),&(r->port),r->buffer,sizeof(netSource))){
-        if(pthread_create(&newthread,NULL,accept_req,r)!=0){
-          perror("pthread_create");
-        }
+        //if(pthread_create(&newthread,NULL,accept_req,r)!=0){
+        //  perror("pthread_create");
+        //}
+        threadpool::add(accept_req,r);
         r=pool.get();
         r->self=this;
       }

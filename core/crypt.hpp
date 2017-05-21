@@ -66,6 +66,7 @@ void crypt_decode(T * data,aesblock * key){
   int len=data->header.len();
   if(((end_d-begin_d)<len) || len<0){ //恶意伪造长度
     bzero(data,sizeof(*data));
+    return;
   }
   int hash=RSHash(begin_d,len);
   

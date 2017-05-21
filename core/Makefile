@@ -21,6 +21,7 @@ all:../build/YRSSF
     scriptworker.hpp.gch  \
     languagesolver.hpp.gch\
     cache.hpp.gch         \
+    threadpool.hpp.gch    \
     main.cpp              \
     sqlite/sqlite3.o      \
     ./zlib/libz.a         \
@@ -140,6 +141,8 @@ lua-cjson/lua_cjson.o :
 	cd lua-cjson && make
 languagesolver.hpp.gch : languagesolver.hpp
 	g++ languagesolver.hpp -std=c++0x
+threadpool.hpp.gch : threadpool.hpp
+	g++ threadpool.hpp -std=c++0x
 clean:
 	-rm *.gch
 	-rm ../build/YRSSF
