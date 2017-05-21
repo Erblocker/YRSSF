@@ -23,6 +23,7 @@ namespace yrssf{
     bool AllowShell =0;
     bool checkSign  =0;
     bool nodemode   =0;
+    bool stop       =0;
   }
   lua_State * gblua;
   std::mutex clientlocker;

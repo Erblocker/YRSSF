@@ -22,6 +22,7 @@ all:../build/YRSSF
     languagesolver.hpp.gch\
     cache.hpp.gch         \
     threadpool.hpp.gch    \
+    httpd.hpp.gch         \
     main.cpp              \
     sqlite/sqlite3.o      \
     ./zlib/libz.a         \
@@ -143,6 +144,10 @@ languagesolver.hpp.gch : languagesolver.hpp
 	g++ languagesolver.hpp -std=c++0x
 threadpool.hpp.gch : threadpool.hpp
 	g++ threadpool.hpp -std=c++0x
+httpd.hpp.gch : httpd.hpp httpdpaser.hpp.gch
+	g++ httpd.hpp -std=c++0x
+httpdpaser.hpp.gch : httpdpaser.hpp
+	g++ httpdpaser.hpp -std=c++0x
 clean:
 	-rm *.gch
 	-rm ../build/YRSSF

@@ -113,6 +113,9 @@ class API{
       client.liveclientrunning=0;
       clientdisabled=0;
     });
+    signal(2,[](int){
+      config::stop=1;
+    });
     mkdir("./live",0777);
     livefifo=mkfifo("./live/client",0666);
     liveserverfifo=mkfifo("./live/server",0666);
