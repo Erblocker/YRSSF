@@ -52,7 +52,7 @@ namespace yrssf{
       static void downstr(char * in){
         auto inp=in;
         while(*inp){
-          *inp=downchar(*in);
+          *inp=downchar(*inp);
           inp++;
         }
       }
