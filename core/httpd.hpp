@@ -66,7 +66,7 @@ namespace yrssf{
       }
       virtual bool getcookie(){
         init();
-        auto ctl=paseredheader.find("Cookie:");
+        auto ctl=paseredheader.find("Cookie");
         if(ctl==paseredheader.end())
           return 0;
         else
