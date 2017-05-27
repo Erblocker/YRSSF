@@ -46,14 +46,17 @@ namespace yrssf{
                   cp++;
               }
               v=cp;
+              downstr(k);
               if(v[0]!='\0')//k前面已经验证过了
                 paseredheader[k]=v;
             }
             numchars = get_line(fd, buf, sizeof(buf));
         }
-        auto ctl=paseredheader.find("Content-Length");
+        auto ctl=paseredheader.find("content-length");
         if(ctl!=paseredheader.end())
           content_length=atoi(ctl->second.c_str());
+        else
+          content_length=-1;
       }
       virtual bool checkpost(){
         init();
@@ -66,7 +69,7 @@ namespace yrssf{
       }
       virtual bool getcookie(){
         init();
-        auto ctl=paseredheader.find("Cookie");
+        auto ctl=paseredheader.find("cookie");
         if(ctl==paseredheader.end())
           return 0;
         else

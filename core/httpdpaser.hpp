@@ -44,6 +44,18 @@ namespace yrssf{
       }
       private:
       public:
+      static char downchar(char in){//大小写转换
+        if(in<'A')return in;
+        if(in>'Z')return in;
+        return (in+('a'-'A'));
+      }
+      static void downstr(char * in){
+        auto inp=in;
+        while(*inp){
+          *inp=downchar(*in);
+          inp++;
+        }
+      }
       static void kv_paser(
         const char * str,
         char cl,
