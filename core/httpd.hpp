@@ -605,6 +605,7 @@ namespace yrssf{
         readBufferBeforeSend(connfd);
 
         //返回方法不存在
+        ysDebug("not_found:%s query=%s",path,req.query);
         not_found(connfd);
       } else {
         //文件存在，那去跟常量S_IFMT相与，相与之后的值可以用来判断该文件是什么类型的

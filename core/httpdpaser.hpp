@@ -66,7 +66,7 @@ namespace yrssf{
         //ysDebug("debug");
         int i;
         char buffer_k[128];
-        char buffer_v[128];
+        char buffer_v[1024];
         const char * cp;
         cp=str;
         while(*cp){
@@ -76,7 +76,7 @@ namespace yrssf{
           }
           buffer_k[i]='\0';
           cp++;
-          for(i=0;(i<126 && (*cp)!=ce && cp!='\0');i++){
+          for(i=0;(i<1022 && (*cp)!=ce && cp!='\0');i++){
             buffer_v[i]=*cp;
             cp++;
           }

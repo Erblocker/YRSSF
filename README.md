@@ -11,8 +11,8 @@
 *  内置锁机(#喷)（没办法，这是校内云教学软件……）  
 *  操作系统兼容POSIX，比如Android,Linux。  
 *  可通过web管理（<u>但是不能https</u>）  
+*  支持cgi和fastcgi（可以直接移植php项目什么的了）  
 *  目前尚不支持Windows，可通过VNC来使用Windows程序  
-*  目前http上传文件有bug，会出现413错误。上传文件请直接使用自带的协议  
 ## 文档：  ##
 [APIs](build)  
 ## 警告：  ##
@@ -58,3 +58,7 @@ launcher和daemon会相互保护，单独结束其中任意一个都会被另一
 *  0x00000001 (NEEDED)                     Shared library: [libc.so.6]
 #### 静态编译： ####
 进入core目录，`make android`  
+## 插件开发： ##
+编译完成后，/build 整个目录可以直接复制出来在其他位置执行  
+/build/static 为www目录（存放网页以及cgi文件）  
+/build/live   下的文件为直播的管道文件  

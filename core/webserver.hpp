@@ -4,6 +4,9 @@
 #include "httpd.hpp"
 void ajax(yrssf::httpd::request * req){
     lua_State * L=lua_newthread(yrssf::gblua);
+    
+    char buf[4096];
+    
     //ysDebug("debug");
     req->init();
     //ysDebug("debug");
@@ -21,7 +24,9 @@ void ajax(yrssf::httpd::request * req){
       it++
     ){
       lua_pushstring(L, it->first.c_str());
-      lua_pushstring(L, it->second.c_str());
+      strcpy(buf,it->second.c_str());
+      yrssf::url_decode(buf,strlen(buf));
+      lua_pushstring(L,buf);
       lua_settable(L, -3);
     }
     lua_setglobal(L,"GET");
@@ -37,7 +42,9 @@ void ajax(yrssf::httpd::request * req){
         it++
       ){
         lua_pushstring(L, it->first.c_str());
-        lua_pushstring(L, it->second.c_str());
+        strcpy(buf,it->second.c_str());
+        yrssf::url_decode(buf,strlen(buf));
+        lua_pushstring(L,buf);
         lua_settable(L, -3);
       }
       lua_setglobal(L,"POST");
