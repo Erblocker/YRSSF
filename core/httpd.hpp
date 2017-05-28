@@ -17,6 +17,7 @@
 #include <list>
 #include "httpdpaser.hpp"
 #include "global.hpp"
+#include "httpdfastcgi.hpp"
 #define ISspace(x) isspace((int)(x))
 #define SERVER_STRING "Server: lzx-tiny-httpd/0.1.0\r\n"
 namespace yrssf{
@@ -558,6 +559,8 @@ namespace yrssf{
             query_string++;
             
             req.query=query_string;
+        }else{
+            req.query=NULL;
         }
       //}
       const char * path_p=url;
@@ -626,7 +629,10 @@ namespace yrssf{
             ysDebug("serve_file:%s query=%s",path,req.query);
         } else {
             //CGI解析
-            execute_cgi(connfd, path, method, query_string);
+            if(config::fastcgi)
+              fastcgi::call(connfd, path, method, query_string);
+            else
+              execute_cgi(connfd, path, method, query_string);
             ysDebug("execute_cgi:%s query=%s",path,req.query);
         }
       }
@@ -710,14 +716,20 @@ namespace yrssf{
       //绑定监听端口
       listenfd = startup(&port);
       ysDebug("httpd running on port %d\n", port);
+      
+      //非阻塞
+      if (fcntl(listenfd, F_SETFL, O_NONBLOCK) == -1) {
+        ysDebug("Set server socket nonblock failed\n");
+        exit(1);
+      }
 
       while (config::stop==0){
         //loop waiting for client connection
-        //if(!wait_for_data(connfd,1,0))continue;
+        if(!wait_for_data(listenfd,3,0))continue;
         
         connfd = accept(listenfd, (struct sockaddr *)&client, (socklen_t *)&client_len);
         if (connfd == -1) {
-            error_die("accept");
+            continue;
         }
 
         //处理请求

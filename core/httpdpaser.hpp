@@ -15,6 +15,7 @@
 #include <memory.h>
 #include <map>
 #include <string>
+#include "global.hpp"
 namespace yrssf{
   namespace httpd{
     class requestBase{
@@ -60,7 +61,9 @@ namespace yrssf{
         const char * str,
         char cl,
         char ce,
-        std::map<std::string,std::string> & om){
+        std::map<std::string,std::string> & om
+      ){
+        //ysDebug("debug");
         int i;
         char buffer_k[128];
         char buffer_v[128];
@@ -81,11 +84,18 @@ namespace yrssf{
           cp++;
           om[buffer_k]=buffer_v;
         }
+        //ysDebug("debug");
       }
       virtual void query_decode(){
+        //ysDebug("debug");
+        if(query==NULL)return;
+        if(query[0]=='\0')return;
+        //ysDebug("debug");
         kv_paser(query,'=','&',paseredquery);
       }
       virtual void cookie_decode(){
+        if(cookie==NULL)return;
+        if(cookie[0]=='\0')return;
         kv_paser(cookie,'=',';',paseredcookie);
       }
       virtual void post_decode(){

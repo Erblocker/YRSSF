@@ -10,7 +10,7 @@ function getuserdata()
   if GET["upw"]==nil then
     return false
   end
-  local uid=math.tointeger((GET["uid"])
+  local uid=math.tointeger(GET["uid"])
   if uid==nil then
     return false
   end
@@ -30,6 +30,9 @@ function getuserdata()
 end
 function getcontrol()
   local mode=sqlfilter(GET["mode"])
+  if not mode then
+    return false
+  end
   local res,st=runsql("select * from `control` where name='"..mode.."'")
   if st==false then
     return false
@@ -66,7 +69,7 @@ function router()
       return
     end
     if controlCofig[5]=="1" then
-      if userdata[3]!="1" then
+      if not userdata[3]=="1" then
         return
       end
     end
