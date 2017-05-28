@@ -29,8 +29,7 @@ all:../build/YRSSF
     ./aes/aes.o           \
     ./lua/src/liblua.a    \
     ./leveldb/out-static/libleveldb.a \
-    lua-cjson/lua_cjson.o             \
-    ./lwan/build/common/liblwan.a
+    lua-cjson/lua_cjson.o             
 	
 ../build/YRSSF : .dep
 	g++ main.cpp                       \
@@ -38,7 +37,6 @@ all:../build/YRSSF
 	 ./leveldb/out-static/libleveldb.a \
 	 ./leveldb/out-static/libmemenv.a  \
 	 ./lua/src/liblua.a                \
-	 ./lwan/build/common/liblwan.a     \
 	 ./zlib/libz.a                     \
 	 ./aes/aes.o                       \
 	 ./lua-cjson/lua_cjson.o           \
@@ -48,7 +46,6 @@ all:../build/YRSSF
 	 -ldl                              \
 	 -DWEB1                            \
 	 -I ./lua/src                      \
-	 -I ./lwan/common                  \
 	 -I ./leveldb/include              \
 	 -I ./zlib                         \
 	 -I ./aes                          \
@@ -63,7 +60,6 @@ android : .dep
 	 -pthread                          \
 	 ./leveldb/out-static/libleveldb.a \
 	 ./leveldb/out-static/libmemenv.a  \
-	 ./lwan/build/common/liblwan.a     \
 	 ./lua/src/liblua.a                \
 	 ./zlib/libz.a                     \
 	 ./aes/aes.o                       \
@@ -87,9 +83,6 @@ android : .dep
 	 -o ../build/YRSSF
 ./zlib/libz.a :
 	cd zlib       && make
-./lwan/build/common/liblwan.a:
-	-mkdir core/lwan/build
-	cd core/lwan/build && cmake ../   && make	
 ./leveldb/out-static/libleveldb.a :
 	cd leveldb    && make
 ./aes/aes.o :
@@ -106,8 +99,6 @@ rwmutex.hpp.gch : rwmutex.hpp
 	g++ rwmutex.hpp
 base64.hpp.gch : base64.hpp
 	g++ base64.hpp
-lwan-build-config.h.gch : lwan-build-config.h
-	g++ lwan-build-config.h
 cache.hpp.gch : cache.hpp
 	g++ cache.hpp -std=c++0x
 classes.hpp.gch : classes.hpp
@@ -133,7 +124,7 @@ server-base.hpp.gch : server-base.hpp
 server.hpp.gch : server.hpp
 	g++ server.hpp -I ./leveldb/include -std=c++0x
 webserver.hpp.gch : webserver.hpp
-	g++ webserver.hpp -I ./lwan/common -I ./leveldb/include -std=c++0x
+	g++ webserver.hpp -I ./leveldb/include -std=c++0x
 ysconnection.hpp.gch : ysconnection.hpp
 	g++ ysconnection.hpp -I ./leveldb/include -std=c++0x
 ysdb.hpp.gch : ysdb.hpp
@@ -157,4 +148,4 @@ clean:
 	cd lua       && make clean
 	cd lua-cjson && make clean
 	cd leveldb   && make clean
-	-rm -rf lwan/build
+	

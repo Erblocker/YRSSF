@@ -12,9 +12,11 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
+#include <sys/file.h>
 #include <stdlib.h>
 #include <list>
 #include "httpdpaser.hpp"
+#include "global.hpp"
 #define ISspace(x) isspace((int)(x))
 #define SERVER_STRING "Server: lzx-tiny-httpd/0.1.0\r\n"
 namespace yrssf{
@@ -133,7 +135,8 @@ namespace yrssf{
       }
       return NULL;
     }
-    void addrule(hcallback callback,std::string & prefix){
+    void addrule(hcallback callback,const char * pf){
+      std::string prefix=pf;
       router rr;
       rr.callback=callback;
       rr.prefix=prefix;
@@ -267,15 +270,20 @@ namespace yrssf{
       sprintf(buf, "</BODY></HTML>\r\n");
       send(connfd, buf, strlen(buf), 0);
     }
-    void cat(int connfd, FILE *resource){
+    void cat(int connfd, int resource){
       char buf[1024];
+      int  l;
 
       //从文件描述符中读取指定内容
-      fgets(buf, sizeof(buf), resource);
+      while((l=read(resource,buf,sizeof(buf)))>0){
+        send(connfd,buf,l,0);
+      }
+      /*
       while (!feof(resource)){
         send(connfd, buf, strlen(buf), 0);
         fgets(buf, sizeof(buf), resource);
       }
+      */
     }
     void headers(int connfd, const char *filename){
       char buf[1024];
@@ -291,7 +299,7 @@ namespace yrssf{
       send(connfd, buf, strlen(buf), 0);
     }
     void serve_file(int connfd, const char *filename){
-      FILE *resource = NULL;
+      int resource = 0;
       int numchars = 1;
       char buf[1024];
 
@@ -302,17 +310,27 @@ namespace yrssf{
         numchars = get_line(connfd, buf, sizeof(buf));
 
       //打开这个传进来的这个路径所指的文件
-      resource = fopen(filename, "r");
-      if (resource == NULL) {
+      //ysDebug("open file %s",filename);
+      
+      resource = open(filename,O_RDONLY);
+      
+      if (resource == -1) {
+        //ysDebug("nofound");
+        
         not_found(connfd);
+        
       } else {
         //打开成功后，将这个文件的基本信息封装成 response 的头部(header)并返回
         headers(connfd, filename);
         //接着把这个文件的内容读出来作为 response 的 body 发送到客户端
+        //ysDebug("read file");
+        
         cat(connfd, resource);
+        
+        //ysDebug("read file end");
       }
 
-      fclose(resource);
+      close(resource);
     }
     void cannot_execute(int connfd){
       char buf[1024];
@@ -536,29 +554,30 @@ namespace yrssf{
             //从字符 ？ 处把字符串 url 给分隔为两份
             *query_string = '\0'; //把url的?改为\0，这样url只是？的前边部分了。
             //使指针指向字符 ？后面的那个字符
-            req.query=query_string+1;
+            
             query_string++;
+            
+            req.query=query_string;
         }
       //}
-      const char * path_p=path;
+      const char * path_p=url;
       while(*path_p){
-        if(
-          path_p[0]=='/' &&
-          path_p[1]=='.' &&
-          path_p[2]=='.' &&
-          path_p[3]=='/'
-        ){//防止恶意请求
-          //清除缓冲区消息头和消息体
-          readBufferBeforeSend(connfd);
-          forbidden(connfd);
-          close(connfd);
-          return;
+        if((*path_p)=='.'){//防止恶意请求
+          if((*(path_p+1))=='.'){
+            //清除缓冲区消息头和消息体
+            readBufferBeforeSend(connfd);
+            ysDebug("forbidden:%s query=%s",path,req.query);
+            forbidden(connfd);
+            close(connfd);
+            return;
+          }
         }
         path_p++;
       }
       
-      hcallback cb=prefix_match(path);
+      hcallback cb=prefix_match(url);
       if(cb){
+        ysDebug("handler:%s query=%s",path,req.query);
         cb(&req);
         close(connfd);
         return;
@@ -576,6 +595,8 @@ namespace yrssf{
       //在系统上去查询该文件是否存在
       //int stat(const char * file_name, struct stat *buf);
       //stat()用来将参数file_name 所指的文件状态, 复制到参数buf 所指的结构中。执行成功则返回0，失败返回-1，错误代码存于errno。
+      
+      
       if (stat(path, &st) == -1) {
         //如果不存在，那把这次 http 的请求后续的内容(head 和 body)全部读完并忽略
         readBufferBeforeSend(connfd);
@@ -602,12 +623,14 @@ namespace yrssf{
         if (!cgi) {
             //静态解析
             serve_file(connfd, path);
+            ysDebug("serve_file:%s query=%s",path,req.query);
         } else {
             //CGI解析
             execute_cgi(connfd, path, method, query_string);
+            ysDebug("execute_cgi:%s query=%s",path,req.query);
         }
       }
-
+            
       close(connfd);
     }
     void error_die(const char *sc){
@@ -673,9 +696,10 @@ namespace yrssf{
          return 1;
       return 0;
     }
-    int run(short p){
+    int run(u_short p){
       int listenfd = -1;
       u_short port = p;
+      ysDebug("listen on %d",p);
       int connfd = -1;
 
       struct sockaddr_in client;
@@ -685,11 +709,11 @@ namespace yrssf{
 
       //绑定监听端口
       listenfd = startup(&port);
-      printf("httpd running on port %d\n", port);
+      ysDebug("httpd running on port %d\n", port);
 
       while (config::stop==0){
         //loop waiting for client connection
-        if(!wait_for_data(connfd,1,0))continue;
+        //if(!wait_for_data(connfd,1,0))continue;
         
         connfd = accept(listenfd, (struct sockaddr *)&client, (socklen_t *)&client_len);
         if (connfd == -1) {
