@@ -17,6 +17,35 @@ namespace yrssf{
        void                *arg;                    /* 传入任务函数的参数 */
        struct tpool_work   *next;                    
     }tpool_work_t;
+    class tw_pool{
+      tpool_work_t * freed;
+      public:
+      tw_pool(){
+        freed=NULL;
+      }
+      ~tw_pool(){
+        tpool_work_t * it1;
+        tpool_work_t * it=freed;
+        while(it){
+          it1=it;
+          it=it->next;
+          delete it1;
+        }
+      }
+      tpool_work_t * get(){
+        if(freed){
+          tpool_work_t * r=freed;
+          freed=freed->next;
+          return r;
+        }else{
+          return new tpool_work_t;
+        }
+      }
+      void del(tpool_work_t * f){
+        f->next=freed;
+        freed=f;
+      }
+    }tpl;
     typedef struct tpool {
        int             shutdown;                    /* 线程池是否销毁 */
        int             max_thr_num;                /* 最大线程数 */
@@ -43,7 +72,8 @@ namespace yrssf{
            pthread_mutex_unlock(&tpool->queue_lock);
     
            work->routine(work->arg);
-           free(work);
+           //free(work);
+           tpl.del(work);
        }
        return NULL;   
     }
@@ -128,7 +158,8 @@ namespace yrssf{
           return -1;
       }
       
-      work = (tpool_work_t*)malloc(sizeof(tpool_work_t));
+      //work = (tpool_work_t*)malloc(sizeof(tpool_work_t));
+      work=tpl.get();
       if (!work) {
           printf("%s:malloc failed\n", __FUNCTION__);
           return -1;

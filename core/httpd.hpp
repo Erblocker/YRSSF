@@ -19,7 +19,7 @@
 #include "global.hpp"
 #include "httpdfastcgi.hpp"
 #define ISspace(x) isspace((int)(x))
-#define SERVER_STRING "Server: lzx-tiny-httpd/0.1.0\r\n"
+#define SERVER_STRING "Server: yrssf-httpd/0.1.0\r\n"
 namespace yrssf{
   namespace httpd{
     int get_line(int sock, char *buf, int size);

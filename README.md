@@ -62,3 +62,14 @@ launcher和daemon会相互保护，单独结束其中任意一个都会被另一
 编译完成后，/build 整个目录可以直接复制出来在其他位置执行  
 /build/static 为www目录（存放网页以及cgi文件）  
 /build/live   下的文件为直播的管道文件  
+
+# 鸣谢 # 
+*  lua  
+*  lua-cjson  
+*  leveldb  
+*  zlib  
+*  sqlite  
+*  cppjieba  
+*  [studyHttpd](https://github.com/tw1996/studyHttpd)  
+*  tinyhttpd  
+*  SDL  

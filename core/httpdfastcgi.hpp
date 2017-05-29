@@ -98,7 +98,7 @@ namespace yrssf{
       char method[10];           //请求方式
       char path[256];            //文件路径
       //char filename[256];      //请求文件名
-      char version[10];          //HTTP协议版本
+      //char version[10];        //HTTP协议版本
       //char url[256];           //请求url
       char param[256];           //请求参数
       char contype[256];         //消息类型
@@ -197,7 +197,7 @@ namespace yrssf{
       char *body, *start, *end, mime[256];
       int header_len, n;
 
-      sprintf(header, "%s 200 OK\r\n", hr->version);
+      sprintf(header, "HTTP/1.0 200 OK\r\n");
       body = strstr(ok, "\r\n\r\n") + 4;
 
       header_len = (int)(body - ok);      //头长度
@@ -481,7 +481,25 @@ namespace yrssf{
       start[strlen(start) - 1] = '\0';
       return start;
     }
-    
+    void error_413(int connfd){
+      char buf[1024];
+      sprintf(buf, "HTTP/1.0 413 TOO LARGE\r\n");
+      send(connfd, buf, strlen(buf), 0);
+      sprintf(buf, "Server: yrssf-httpd/0.1.0\r\n");
+      send(connfd, buf, strlen(buf), 0);
+      sprintf(buf, "Content-Type: text/html\r\n");
+      send(connfd, buf, strlen(buf), 0);
+      sprintf(buf, "\r\n");
+      send(connfd, buf, strlen(buf), 0);
+      sprintf(buf, "<HTML><TITLE>TOO LARGE</TITLE>\r\n");
+      send(connfd, buf, strlen(buf), 0);
+      sprintf(buf, "<BODY>Too large.<br>\r\n");
+      send(connfd, buf, strlen(buf), 0);
+      sprintf(buf, "The body is too large.\r\n");
+      send(connfd, buf, strlen(buf), 0);
+      sprintf(buf, "</BODY></HTML>\r\n");
+      send(connfd, buf, strlen(buf), 0);
+    }
     void call(int connfd, const char *path, const char *method, const char *query_string){
       http_header hr;
       
@@ -515,6 +533,10 @@ namespace yrssf{
       
       /* body内容  recv不能一次性接受很大值...  或者可以setsockopt 增大接受缓冲区*/
       int len = atoi(hr.conlength);
+      if(len > config::httpBodyLength){
+        error_413(connfd);
+        return;
+      }
       if(len > 0 && strcmp("POST", hr.method) == 0){
         if((hr.content = (char *)malloc(len)) == NULL){
             ysDebug("http body alloc memory fail");
@@ -525,7 +547,7 @@ namespace yrssf{
             recvbytes =  recv(connfd, cur_recv, MAX_RECV_SIZE, 0);
             if(-1 == recvbytes){
                 ysDebug("recv http body fail");
-                return;
+                goto endm;
             }
             cur_recv += recvbytes;
             len -= recvbytes;
@@ -534,6 +556,7 @@ namespace yrssf{
       
       exec_fastcgi(connfd,&hr);
       
+      endm:
       free(hr.content);
     }
   }

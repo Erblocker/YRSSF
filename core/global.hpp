@@ -25,6 +25,7 @@ namespace yrssf{
     bool nodemode   =0;
     bool stop       =0;
     bool fastcgi    =0;
+    unsigned int httpBodyLength=65536;
   }
   lua_State * gblua;
   std::mutex clientlocker;
