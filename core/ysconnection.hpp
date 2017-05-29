@@ -12,6 +12,7 @@ extern "C" {
 #include "lua/src/lauxlib.h"
 #include "lua/src/luaconf.h"
 }
+#include "filecache.hpp"
 namespace yrssf{
 class ysConnection:public serverBase{
   public:
@@ -30,9 +31,7 @@ class ysConnection:public serverBase{
     script="default.lua";
   }
   void fileappend(const char * n,char * data,int size){
-    FILE * f=fopen(n,"a");
-    fwrite(data,size,1,f);
-    fclose(f);
+    filecache::fileappend(n,data,size);
   }
   void createfile(const char *n){
     FILE * f=fopen(n,"w");
@@ -570,19 +569,20 @@ class ysConnection:public serverBase{
         filenamer=result.c_str();
         //get file name end
         bzero(&respk,sizeof(respk));
-        ff=fopen(filenamer,"r");
-        fseek(ff,SOURCE_CHUNK_SIZE*query->num1(),SEEK_SET);
-        for(i=0;(i<SOURCE_CHUNK_SIZE && !feof(ff));i++){
-          respk.source[i]=fgetc(ff);
-        }
-        fclose(ff);
+        
+        respk.size=filecache::readfile(
+          filenamer,
+          SOURCE_CHUNK_SIZE*query->num1(),
+          SOURCE_CHUNK_SIZE,
+          respk.source
+        );
+        
         respk.header.userid=myuserid;
         for(i=0;i<16;i++)
           respk.header.password[i]=mypassword[i];
         
         respk.header.unique=header->unique;
         
-        respk.size=i;
         respk.header.mode=_SETSRC_APPEND;
         wristr(query->str1,respk.title);
         if(crypt)crypt_encode(&respk,&key);
@@ -639,7 +639,7 @@ class ysConnection:public serverBase{
             return 0;
           }
         }
-        if(remove(result.c_str())==-1){
+        if(filecache::removefile(result.c_str())==-1){
           fail(from,port,header->unique);
           return 0;
         }

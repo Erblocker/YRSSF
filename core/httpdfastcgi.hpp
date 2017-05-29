@@ -104,7 +104,7 @@ namespace yrssf{
       char contype[256];         //消息类型
       char conlength[16];        //消息长度
       //char ext[10];            //文件后缀
-      char *content;             //body
+      //char *content;             //body
     };
     
     FCGI_Header makeHeader(int type, int requestId, int contentLength, int paddingLength){
@@ -293,6 +293,7 @@ namespace yrssf{
 
       /*POST　并且有请求体 才会发送FCGI_STDIN数据 */
       char buf[8] = {0};
+      char bufcon[8];
       int len = atoi(hr->conlength);
       int send_len;
       if(!strcmp("POST", hr->method)){
@@ -308,16 +309,26 @@ namespace yrssf{
                         ysDebug("fcgi send stdinHeader error");
                         return -1;
                   }
-                  if(-1 == (sendbytes = send(fcgi_fd, hr->content, send_len, 0))){
-                        ysDebug("fcgi send stdin");
-                        return -1;
+                  
+                  int lencon;
+                  for(int j=0;j<send_len;j++){
+                    lencon=recv(client_fd,bufcon,sizeof(bufcon), 0);
+                    if(lencon>0)
+                      send(fcgi_fd, bufcon, lencon, 0);
+                    else
+                      break;
                   }
+                                    
+                  //if(-1 == (sendbytes = send(fcgi_fd, hr->content, send_len, 0))){
+                  //      ysDebug("fcgi send stdin");
+                  //      return -1;
+                  //}
+                  
                   // debug printf("单次发送大小:%d\n发送内容:\n%s\n", sendbytes, hr->content);
                   if((paddingLength > 0) && (-1 == (sendbytes = send(fcgi_fd, buf, paddingLength, 0)))){
                         ysDebug("fcgi send stdin padding");
                         return -1;
                   }
-                  hr->content += send_len;
                   // debug printf("长度%d\n", (int)strlen(hr->content));
             }
       }
@@ -510,8 +521,8 @@ namespace yrssf{
       for(i=0;(i<9 && method[i]);i++)hr.method[i]=method[i];
       hr.method[i]='\0';
       
-      for(i=0;(i<255 && path[i]);i++)hr.path[i]=path[i];
-      hr.path[i]='\0';
+      //for(i=0;(i<255 && path[i]);i++)hr.path[i]=path[i];
+      //hr.path[i]='\0';
       
       if(query_string && query_string[0]){
         for(i=0;(i<255 && query_string[i]);i++)hr.param[i]=query_string[i];
@@ -537,27 +548,10 @@ namespace yrssf{
         error_413(connfd);
         return;
       }
-      if(len > 0 && strcmp("POST", hr.method) == 0){
-        if((hr.content = (char *)malloc(len)) == NULL){
-            ysDebug("http body alloc memory fail");
-            return;
-        }
-        char *cur_recv = hr.content;
-        while(len > 0){
-            recvbytes =  recv(connfd, cur_recv, MAX_RECV_SIZE, 0);
-            if(-1 == recvbytes){
-                ysDebug("recv http body fail");
-                goto endm;
-            }
-            cur_recv += recvbytes;
-            len -= recvbytes;
-        }
-      }
+      
+      sprintf(hr.path, "%s%s","./static",path);
       
       exec_fastcgi(connfd,&hr);
-      
-      endm:
-      free(hr.content);
     }
   }
 }

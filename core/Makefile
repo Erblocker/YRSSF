@@ -125,7 +125,7 @@ server.hpp.gch : server.hpp
 	g++ server.hpp -I ./leveldb/include -std=c++0x
 webserver.hpp.gch : webserver.hpp
 	g++ webserver.hpp -I ./leveldb/include -std=c++0x
-ysconnection.hpp.gch : ysconnection.hpp
+ysconnection.hpp.gch : ysconnection.hpp filecache.hpp.gch
 	g++ ysconnection.hpp -I ./leveldb/include -std=c++0x
 ysdb.hpp.gch : ysdb.hpp
 	g++ ysdb.hpp -I ./leveldb/include -std=c++0x
@@ -141,6 +141,8 @@ httpdpaser.hpp.gch : httpdpaser.hpp
 	g++ httpdpaser.hpp -std=c++0x
 httpdfastcgi.hpp.gch : httpdfastcgi.hpp
 	g++ httpdfastcgi.hpp -std=c++0x
+filecache.hpp.gch : filecache.hpp
+	g++ filecache.hpp -std=c++0x
 clean:
 	-rm *.gch
 	-rm ../build/YRSSF

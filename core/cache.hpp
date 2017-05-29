@@ -12,6 +12,9 @@ namespace yrssf{
       unsigned int time;
       unsigned int tl;
       public:
+      void(*onfree)(value&);
+      void * data;
+      unsigned int length;
       std::string v;
       void init(int t){
         time=nowtime_s();
@@ -23,19 +26,31 @@ namespace yrssf{
       }
       value(){
         init(3600);
+        onfree=NULL;
+        data=NULL;
+        length=0;
       }
       value(unsigned int tt){
         init(tt);
+        onfree=NULL;
+        data=NULL;
+        length=0;
       }
       value(const value & val){
-        this->time=val.time;
-        this->tl  =val.tl;
-        this->v   =val.v;
+        this->time  =val.time;
+        this->tl    =val.tl;
+        this->v     =val.v;
+        this->onfree=val.onfree;
+        this->data  =val.data;
+        this->length=val.length;
       }
       value & operator=(const value & val){
-        this->time=val.time;
-        this->tl  =val.tl;
-        this->v   =val.v;
+        this->time  =val.time;
+        this->tl    =val.tl;
+        this->v     =val.v;
+        this->onfree=val.onfree;
+        this->data  =val.data;
+        this->length=val.length;
         return *this;
       }
     };
@@ -87,6 +102,10 @@ namespace yrssf{
         if(it->second.timeout()){
           it2=it;
           it++;
+          auto pp=it->second;
+          if(pp.onfree){
+            pp.onfree(pp);
+          }
           cache.erase(it2);
           goto bg;
         }
