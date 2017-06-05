@@ -233,12 +233,12 @@ namespace yrssf{
       fcgi_sock.sin_port = htons(FCGI_PORT);
       
       if(-1 == (fcgi_fd = socket(PF_INET, SOCK_STREAM, 0))){
-            ysDebug("fcgi socket()");
+            ysError("fcgi socket()");
             return -1;
       }
       
       if(-1 == connect(fcgi_fd, (struct sockaddr *)&fcgi_sock, sizeof(fcgi_sock))){
-            ysDebug("php-fpm connect");
+            ysError("php-fpm connect");
             return -1;
       }
       return fcgi_fd;
@@ -254,7 +254,7 @@ namespace yrssf{
       beginRecord.body = makeBeginRequestBody(FCGI_RESPONDER);
       beginRecord.header =  makeHeader(FCGI_BEGIN_REQUEST, requestId, sizeof(beginRecord.body), 0);
       if(-1 == (sendbytes = send(fcgi_fd, &beginRecord, sizeof(beginRecord), 0))){
-            ysDebug("fcgi send beginRecord error");
+            ysError("fcgi send beginRecord error");
             return -1;
       }
 
@@ -279,7 +279,7 @@ namespace yrssf{
             memcpy(paramsRecord->data, params[i][0], strlen(params[i][0]));
             memcpy(paramsRecord->data + strlen(params[i][0]), params[i][1], strlen(params[i][1]));
             if(-1 == (sendbytes = send(fcgi_fd, paramsRecord, 8 + conLength + paddingLength, 0))){
-                  ysDebug("fcgi send paramsRecord error");
+                  ysError("fcgi send paramsRecord error");
                   return -1;
             }
             free(paramsRecord);
@@ -287,7 +287,7 @@ namespace yrssf{
       /* 空的FCGI_PARAMS参数 */
       emptyData = makeHeader(FCGI_PARAMS, requestId, 0, 0);
       if(-1 == (sendbytes = send(fcgi_fd, &emptyData, FCGI_HEADER_LEN, 0))){
-            ysDebug("fcgi send paramsRecord empty error");
+            ysError("fcgi send paramsRecord empty error");
             return -1;
       }
 
@@ -306,7 +306,7 @@ namespace yrssf{
                   paddingLength = (send_len %  8) == 0 ? 0 :  8 - (send_len % 8);
                   stdinHeader = makeHeader(FCGI_STDIN, requestId, send_len, paddingLength);
                   if(-1 == (sendbytes = send(fcgi_fd, &stdinHeader,FCGI_HEADER_LEN, 0))){
-                        ysDebug("fcgi send stdinHeader error");
+                        ysError("fcgi send stdinHeader error");
                         return -1;
                   }
                   
@@ -320,13 +320,13 @@ namespace yrssf{
                   }
                                     
                   //if(-1 == (sendbytes = send(fcgi_fd, hr->content, send_len, 0))){
-                  //      ysDebug("fcgi send stdin");
+                  //      ysError("fcgi send stdin");
                   //      return -1;
                   //}
                   
                   // debug printf("单次发送大小:%d\n发送内容:\n%s\n", sendbytes, hr->content);
                   if((paddingLength > 0) && (-1 == (sendbytes = send(fcgi_fd, buf, paddingLength, 0)))){
-                        ysDebug("fcgi send stdin padding");
+                        ysError("fcgi send stdin padding");
                         return -1;
                   }
                   // debug printf("长度%d\n", (int)strlen(hr->content));
@@ -337,7 +337,7 @@ namespace yrssf{
       /* 发送空的FCGI_STDIN数据 */
       FCGI_Header emptyStdin = makeHeader(FCGI_STDIN, requestId, 0, 0);
       if(-1 == (sendbytes = send(fcgi_fd, &emptyStdin, FCGI_HEADER_LEN, 0))){
-            ysDebug("fcgi send stdinHeader enpty");
+            ysError("fcgi send stdinHeader enpty");
             return -1;
       }
       return 1;
@@ -363,13 +363,13 @@ namespace yrssf{
                   outlen += contentLength;
                   if(ok != NULL){
                         if(NULL == (ok =(char*) realloc(ok, outlen))){
-                              ysDebug("realloc memory ok fail");
+                              ysError("realloc memory ok fail");
                               free(ok);
                               return ;
                         }
                   }else{
                         if(NULL == (ok = (char *)malloc(contentLength))){
-                              ysDebug("alloc memory ok fail");
+                              ysError("alloc memory ok fail");
                               return ;
                         }
                   }
@@ -377,7 +377,7 @@ namespace yrssf{
                         //本次从缓冲区读取大小
                         ok_recv = contentLength > MAX_RECV_SIZE ? MAX_RECV_SIZE : contentLength;
                         if( -1 == (recvbytes = recv(fcgi_fd, ok + ok_recved, ok_recv, 0))){
-                              ysDebug("fcgi recv stdout fail");
+                              ysError("fcgi recv stdout fail");
                               return ;
                         }
                         contentLength -= recvbytes;
@@ -387,7 +387,7 @@ namespace yrssf{
                   if(responseHeader.paddingLength > 0){
                         recvbytes = recv(fcgi_fd, buf, responseHeader.paddingLength, 0);
                         if(-1 == recvbytes || recvbytes != responseHeader.paddingLength){
-                              ysDebug("fcgi stdout padding fail");
+                              ysError("fcgi stdout padding fail");
                               return;
                         }
                   }
@@ -396,13 +396,13 @@ namespace yrssf{
                   errlen += contentLength;
                   if(err != NULL){
                         if( NULL == (err =(char*) realloc(err, errlen))){      
-                              ysDebug("fcgi stderr realloc memory fail");
+                              ysError("fcgi stderr realloc memory fail");
                               free(err);
                               return ;
                         }
                   }else{
                         if(NULL == (err = (char *)malloc(contentLength))){      
-                              ysDebug("fcgi stderr alloc memory fail");
+                              ysError("fcgi stderr alloc memory fail");
                               return ;
                         }
                   }
@@ -411,7 +411,7 @@ namespace yrssf{
                         //本次从缓冲区读取大小
                         err_recv = contentLength > MAX_RECV_SIZE ? MAX_RECV_SIZE : contentLength;
                         if( -1 == (recvbytes = recv(fcgi_fd, err + err_recved, err_recv, 0))){
-                              ysDebug("fcgi recv stderr fail");
+                              ysError("fcgi recv stderr fail");
                               return ;
                         }
                         contentLength -= recvbytes;
@@ -421,7 +421,7 @@ namespace yrssf{
                   if(responseHeader.paddingLength > 0){
                         recvbytes = recv(fcgi_fd, buf, responseHeader.paddingLength, 0);
                         if(-1 == recvbytes || recvbytes != responseHeader.paddingLength){
-                              ysDebug("fcgi stdout padding");
+                              ysError("fcgi stdout padding");
                               return ;
                         }
                   }
@@ -431,7 +431,7 @@ namespace yrssf{
                   if(-1 == recvbytes || sizeof(responseEnder) != recvbytes){
                         free(err);
                         free(ok);
-                        ysDebug("fcgi recv end fail");
+                        ysError("fcgi recv end fail");
                         return ;
                   }
 

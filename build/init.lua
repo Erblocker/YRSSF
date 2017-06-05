@@ -45,4 +45,7 @@ end
 loadcert()
 loadAllowCerts()
 insertIntoQueue("dofile(\"plan/login.lua\")")
+
+dofile("./init/httpd.lua")
+
 print("inited")

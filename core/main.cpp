@@ -116,6 +116,9 @@ class API{
     signal(2,[](int){
       config::stop=1;
     });
+    signal(SIGPIPE,[](int){
+      //ysDebug("signal:pipe");
+    });
     mkdir("./live",0777);
     livefifo=mkfifo("./live/client",0666);
     liveserverfifo=mkfifo("./live/server",0666);
@@ -620,6 +623,7 @@ class API{
     lua_register(L,"setClientUser",lua_scu);
     luaopen_cjson(L);
     langsolver::luaopen(L);
+    httpd::luaopen(L);
     luaopen_ysfunc(L);
   }
 }api;

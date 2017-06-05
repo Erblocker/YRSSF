@@ -62,7 +62,7 @@ launcher和daemon会相互保护，单独结束其中任意一个都会被另一
 编译完成后，/build 整个目录可以直接复制出来在其他位置执行  
 /build/static 为www目录（存放网页以及cgi文件）  
 /build/live   下的文件为直播的管道文件  
-
+/build/static 目录支持cgi文件或者php文件，但是使用cgi文件时请注意：如果cgi程序有错误，http服务器关闭时会直接`Segmentation fault`（这似乎是cgi的通病）  
 # 鸣谢 # 
 *  lua  
 *  lua-cjson  

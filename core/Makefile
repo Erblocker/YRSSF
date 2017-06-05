@@ -56,7 +56,7 @@ all:../build/YRSSF
 	 -lcrypto                          \
 	 -o ../build/YRSSF
 android : .dep
-	g++ -static main.cpp               \
+	g++ main.cpp                       \
 	 -pthread                          \
 	 ./leveldb/out-static/libleveldb.a \
 	 ./leveldb/out-static/libmemenv.a  \
@@ -67,19 +67,18 @@ android : .dep
 	 ./lua-cjson/strbuf.o              \
 	 ./lua-cjson/fpconv.o              \
 	 ./sqlite/sqlite3.o                \
-	 -Wl,-Bdynamic,-ldl                \
-	 -DWEB2                            \
+	 -ldl                              \
+	 -DWEB1                            \
 	 -I ./lua/src                      \
 	 -I ./leveldb/include              \
-	 -I ./lwan/common                  \
 	 -I ./zlib                         \
 	 -I ./aes                          \
 	 -I ./                             \
 	 -std=c++0x                        \
-	 -Wl,-Bstatic,-ljpeg               \
-	 -Wl,-Bstatic,-lssl                \
-	 -Wl,-Bstatic,-lcrypto             \
-	 -Wl,-Bstatic,-lgcc                \
+	 -ljpeg                            \
+	 -lssl                             \
+	 -lcrypto                          \
+	 -Wl,-dynamic-linker=/system/lib/ld-linux.so.3 \
 	 -o ../build/YRSSF
 ./zlib/libz.a :
 	cd zlib       && make
@@ -135,12 +134,18 @@ languagesolver.hpp.gch : languagesolver.hpp
 	g++ languagesolver.hpp -std=c++0x
 threadpool.hpp.gch : threadpool.hpp
 	g++ threadpool.hpp -std=c++0x
-httpd.hpp.gch : httpd.hpp httpdpaser.hpp.gch httpdfastcgi.hpp.gch
+httpd.hpp.gch : \
+    httpd.hpp \
+    httpdpaser.hpp.gch \
+    httpdfastcgi.hpp.gch \
+    httpdmime.hpp.gch
 	g++ httpd.hpp -std=c++0x
 httpdpaser.hpp.gch : httpdpaser.hpp
 	g++ httpdpaser.hpp -std=c++0x
 httpdfastcgi.hpp.gch : httpdfastcgi.hpp
 	g++ httpdfastcgi.hpp -std=c++0x
+httpdmime.hpp.gch : httpdmime.hpp
+	g++ httpdmime.hpp -std=c++0x
 filecache.hpp.gch : filecache.hpp
 	g++ filecache.hpp -std=c++0x
 clean:

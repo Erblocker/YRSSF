@@ -15,13 +15,58 @@
 #include <sys/file.h>
 #include <stdlib.h>
 #include <list>
+#include <iostream>
 #include "httpdpaser.hpp"
 #include "global.hpp"
 #include "httpdfastcgi.hpp"
+#include "httpdmime.hpp"
 #define ISspace(x) isspace((int)(x))
 #define SERVER_STRING "Server: yrssf-httpd/0.1.0\r\n"
 namespace yrssf{
   namespace httpd{
+    bool file_exist(const char * path){
+      if(access(path,F_OK)==0)
+        return 1;
+      else
+        return 0;
+    }
+    void findindex(char * path){
+      char buf[128];
+      struct stat st;
+      
+      sprintf(buf,"%s%s",path,"index.lua");
+      if(file_exist(buf)){
+        strcat(path,"index.lua");
+        return;
+      }
+      
+      sprintf(buf,"%s%s",path,"index.htm");
+      if(file_exist(buf)){
+        strcat(path,"index.htm");
+        return;
+      }
+      
+      sprintf(buf,"%s%s",path,"index");
+      if(file_exist(buf)){
+        strcat(path,"index");
+        return;
+      }
+      
+      sprintf(buf,"%s%s",path,"index.php");
+      if(file_exist(buf)){
+        strcat(path,"index.php");
+        return;
+      }
+      
+      sprintf(buf,"%s%s",path,"index.cgi");
+      if(file_exist(buf)){
+        strcat(path,"index.cgi");
+        return;
+      }
+      
+      strcat(path,"index.html");
+      
+    }
     int get_line(int sock, char *buf, int size);
     class request:public requestBase{
       public:
@@ -89,6 +134,8 @@ namespace yrssf{
       virtual bool writePostIntoFile(int file){
         char c;
         if(!checkpost()) return 0;
+        if(content_length>config::httpBodyLength)
+          return 0;
         for (int i = 0; i < content_length; i++) {
           recv(fd, &c, 1, 0);
           write(file, &c, 1);
@@ -115,6 +162,7 @@ namespace yrssf{
       hcallback   callback;
     };
     std::list<router>handlers; 
+    void(*rewrite)(char*)=NULL;
     //匹配前缀
     //s1:前缀
     //s2:字符串
@@ -245,7 +293,7 @@ namespace yrssf{
       }
 
       //读出消息体并忽略,这里不能多读也不能少读
-      if(content_length != -1){
+      if(content_length != -1 && content_length<config::httpBodyLength){
         for (i = 0; i < content_length; i++) {
             recv(connfd, &c, 1, 0);
         }
@@ -288,14 +336,15 @@ namespace yrssf{
     }
     void headers(int connfd, const char *filename){
       char buf[1024];
-      (void)filename;  /* could use filename to determine file type */
+      //(void)filename;  /* could use filename to determine file type */
 
       strcpy(buf, "HTTP/1.0 200 OK\r\n");
       send(connfd, buf, strlen(buf), 0);
       strcpy(buf, SERVER_STRING);
       send(connfd, buf, strlen(buf), 0);
-      sprintf(buf, "Content-Type: text/html\r\n");
-      send(connfd, buf, strlen(buf), 0);
+      //sprintf(buf, "Content-Type: text/html\r\n");
+      //send(connfd, buf, strlen(buf), 0);
+      mimer.sendheader(connfd,filename);
       strcpy(buf, "\r\n");
       send(connfd, buf, strlen(buf), 0);
     }
@@ -315,7 +364,7 @@ namespace yrssf{
       
       resource = open(filename,O_RDONLY);
       
-      if (resource == -1) {
+      if (resource < 1) {
         //ysDebug("nofound");
         
         not_found(connfd);
@@ -358,6 +407,35 @@ namespace yrssf{
       send(connfd, buf, sizeof(buf), 0);
       sprintf(buf, "such as a POST without a Content-Length.\r\n");
       send(connfd, buf, sizeof(buf), 0);
+    }
+    void execute_lua(int connfd, const char *path, const char *method, const char *query_string){
+      auto L=lua_newthread(gblua);
+      lua_createtable(L,0,4);
+      if(path){
+        lua_pushstring(L, "path");
+        lua_pushstring(L, path);
+        lua_settable(L, -3);
+      }
+      if(query_string){
+        lua_pushstring(L, "query");
+        lua_pushstring(L, query_string);
+        lua_settable(L, -3);
+      }
+      if(method){
+        lua_pushstring(L, "method");
+        lua_pushstring(L, method);
+        lua_settable(L, -3);
+      }
+      if(connfd){
+        lua_pushstring(L, "fd");
+        lua_pushinteger(L, connfd);
+        lua_settable(L, -3);
+      }
+      lua_setglobal(L,"Request");
+      luaL_dofile(L,path);
+      if(lua_isstring(L,-1)){
+        std::cout<<lua_tostring(L,-1)<<std::endl;
+      }
     }
     void execute_cgi(int connfd, const char *path, const char *method, const char *query_string){
       char buf[1024];
@@ -487,7 +565,7 @@ namespace yrssf{
       req.fd=connfd;
       int cgi = 0;      /* 如果确定是cgi请求需要把这个变量置为1 */
       char *query_string = NULL; //参数
-
+      //ysDebug("debug");
       //从socket中读取一行数据
       //这里就是读取请求行(GET /index.html HTTP/1.1)，行数据放到buf中，长度返回给numchars
       numchars = get_line(connfd, buf, sizeof(buf));
@@ -498,7 +576,7 @@ namespace yrssf{
         i++; j++;
       }
       method[i] = '\0';
-
+      //ysDebug("debug");
       //如果请求的方法不是 GET 或 POST 任意一个的话就直接发送 response 告诉客户端没实现该方法
       //strcasecmp 忽略大小写
       if (strcasecmp(method, "GET") && strcasecmp(method, "POST")){
@@ -511,7 +589,7 @@ namespace yrssf{
 
         return;
       }
-
+      //ysDebug("debug");
       //如果是 POST 方法就将 cgi 标志变量置一(true)
       if (strcasecmp(method, "POST") == 0) {
         cgi = 1;
@@ -529,16 +607,27 @@ namespace yrssf{
 
       //然后把 URL 读出来放到 url 数组中,url结尾要补充\0,所以长度要-1,buf已经存在了,判断长度只是避免越界
       while (!ISspace(buf[j]) && (i < sizeof(url) - 1) && (j < sizeof(buf))){
+        if(i>253)break;
+        
         url[i] = buf[j];
+        
         i++; j++;
       }
       url[i] = '\0';
+      
+      //url重写
+      if(rewrite){
+        rewrite(url);
+      }
+      
       req.url=url;
+      //ysDebug("debug");
 
       //如果这个请求是一个 GET 方法的话
       //TODO 对于不是GET方法的请求其实也是需要解析query_string的，
       //TODO 否则对于POST:http://10.33.106.82:8008/check.cgi?name=foo 带参数的情况path解析是失败的。
       //TODO 但这里只是简单的区分GET和POST请求,这个就不考虑了吧
+      //ysDebug("debug");
       //if (strcasecmp(method, "GET") == 0){
         //用一个指针指向 url
         query_string = url;
@@ -564,9 +653,20 @@ namespace yrssf{
         }
       //}
       const char * path_p=url;
+      //ysDebug("debug");
       while(*path_p){
         if((*path_p)=='.'){//防止恶意请求
-          if((*(path_p+1))=='.'){
+          if((*(path_p+1))=='.' || (*(path_p+1))=='/'){
+            //清除缓冲区消息头和消息体
+            readBufferBeforeSend(connfd);
+            ysDebug("forbidden:%s query=%s",path,req.query);
+            forbidden(connfd);
+            close(connfd);
+            return;
+          }
+        }
+        if((*path_p)=='/'){//防止恶意请求
+          if((*(path_p+1))=='/' || (*(path_p+1))=='.'){
             //清除缓冲区消息头和消息体
             readBufferBeforeSend(connfd);
             ysDebug("forbidden:%s query=%s",path,req.query);
@@ -585,21 +685,40 @@ namespace yrssf{
         close(connfd);
         return;
       }
+      //ysDebug("debug");
 
       //将url字符串(只包含url,参数已经被截断了)，拼接在字符串htdocs的后面之后就输出存储到path中。
       //因为url的第一个字符是/，所以不用加/
+      if(strlen(url)>(sizeof(path)-16)){
+        readBufferBeforeSend(connfd);
+        bad_request(connfd);
+        close(connfd);
+        return;
+      }
+      
       sprintf(path, "static%s", url);
 
       //如果 path 数组中的这个字符串的最后一个字符是以字符 / 结尾的话，就拼接上一个"index.html"的字符串。首页的意思
       if (path[strlen(path) - 1] == '/') {
-        strcat(path, "index.html");
+        findindex(path);
       }
+      
+      //ysDebug("debug");
 
+      //ysDebug("path:%s",path);
       //在系统上去查询该文件是否存在
       //int stat(const char * file_name, struct stat *buf);
       //stat()用来将参数file_name 所指的文件状态, 复制到参数buf 所指的结构中。执行成功则返回0，失败返回-1，错误代码存于errno。
+      check_dir:
       
+      if(strlen(path)>(sizeof(path)-16)){
+        readBufferBeforeSend(connfd);
+        bad_request(connfd);
+        close(connfd);
+        return;
+      }
       
+      //ysDebug("check");
       if (stat(path, &st) == -1) {
         //如果不存在，那把这次 http 的请求后续的内容(head 和 body)全部读完并忽略
         readBufferBeforeSend(connfd);
@@ -609,11 +728,19 @@ namespace yrssf{
         not_found(connfd);
       } else {
         //文件存在，那去跟常量S_IFMT相与，相与之后的值可以用来判断该文件是什么类型的
-        if ((st.st_mode & S_IFMT) == S_IFDIR)
+        if (S_ISDIR(st.st_mode)){
+            //ysDebug("is dir");
             //如果这个文件是个目录，那就需要再在 path 后面拼接一个"/index.html"的字符串
-            //注意此时访问需要http://10.33.106.82:8008/static/，后边不带/不能识别为目录
-            strcat(path, "/index.html");
+            ////注意此时访问需要http://10.33.106.82:8008/static/，后边不带/不能识别为目录
+            //上面这个bug已经解决
+            strcat(path,"/");
+            findindex(path);
+            goto check_dir;
+        }
+        
+        //ysDebug("debug");
 
+        //ysDebug("%s",path);
         //S_IXUSR:用户可以执行
         // S_IXGRP:组可以执行
         // S_IXOTH:其它人可以执行
@@ -623,18 +750,26 @@ namespace yrssf{
         }else{
             cgi = 0;
         }
+        
+        //ysDebug("debug");
 
         if (!cgi) {
             //静态解析
-            serve_file(connfd, path);
             ysDebug("serve_file:%s query=%s",path,req.query);
+            serve_file(connfd, path);
         } else {
             //CGI解析
-            if(config::fastcgi)
-              fastcgi::call(connfd, path, method, query_string);
-            else
-              execute_cgi(connfd, path, method, query_string);
             ysDebug("execute_cgi:%s query=%s",path,req.query);
+            char ext[16];
+            mimer.getext(path,ext);
+            if(strcmp(ext,"lua")==0){
+              execute_lua(connfd, path, method, query_string);
+            }else{
+              if(config::fastcgi)
+                fastcgi::call(connfd, path, method, query_string);
+              else
+                execute_cgi(connfd, path, method, query_string);
+            }
         }
       }
             
@@ -665,7 +800,6 @@ namespace yrssf{
       name.sin_family = AF_INET;
 
       //<arpa/inet.h>，将*port 转换成以网络字节序表示的16位整数
-      //这里port已被我修改为8008,如果为0的话内核会在bind时自动分配一个端口号
       name.sin_port = htons(*port);
       name.sin_addr.s_addr = htonl(INADDR_ANY);
 
@@ -748,6 +882,80 @@ namespace yrssf{
       close(listenfd);
  
       return (0);
+    }
+    void luaopen(lua_State * L){
+      luaL_Reg reg[]={
+        {"fastcgiModeOn",[](lua_State * L){
+            config::fastcgi=1;
+            return 0;
+          }
+        },
+        {"fastcgiModeOff",[](lua_State * L){
+            config::fastcgi=0;
+            return 0;
+          }
+        },
+        {"setMaxContentLen",[](lua_State * L){
+            if(!lua_isinteger(L,1))return 0;
+            config::httpBodyLength=lua_tointeger(L,1);
+            return 0;
+          }
+        },
+        {"setMime",[](lua_State * L){
+            if(!lua_isstring(L,1))return 0;
+            if(!lua_isstring(L,2))return 0;
+            mimer.setmime(
+              lua_tostring(L,1),
+              lua_tostring(L,2)
+            );
+            return 0;
+          }
+        },
+        {"write",[](lua_State * L){
+            if(!lua_isinteger(L,1))return 0;
+            if(!lua_isstring (L,2))return 0;
+            writeStr(
+              lua_tointeger(L,1),
+              lua_tostring(L,2)
+            );
+          }
+        },
+        {"readBufferBeforeSend",[](lua_State * L){
+            if(!lua_isinteger(L,1))return 0;
+            readBufferBeforeSend(lua_tointeger(L,1));
+            return 0;
+          }
+        },
+        {"readline",[](lua_State * L){
+            //get_line(int sock, char *buf, int size)
+            if(!lua_isinteger(L,1))return 0;
+            char buf[1024];
+            get_line(
+              lua_tointeger(L,1),
+              buf,
+              sizeof(buf)
+            );
+            buf[1022]='\0';
+            lua_pushstring(L,buf);
+            return 1;
+          }
+        },
+        {"serve_file",[](lua_State * L){
+            if(!lua_isinteger(L,1))return 0;
+            if(!lua_isstring (L,2))return 0;
+            serve_file(
+              lua_tointeger(L,1),
+              lua_tostring(L,2)
+            );
+            return 0;
+          }
+        },
+        {NULL,NULL}
+      };
+      lua_newtable(L);
+      luaL_setfuncs(L, reg,0);
+      lua_setglobal(L,"Httpd");
+      luaopen_httpd_paser(L);
     }
   }
 }

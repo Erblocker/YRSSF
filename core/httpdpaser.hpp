@@ -16,6 +16,7 @@
 #include <map>
 #include <string>
 #include "global.hpp"
+#include "func.hpp"
 namespace yrssf{
   namespace httpd{
     class requestBase{
@@ -113,6 +114,41 @@ namespace yrssf{
       virtual bool writePostIntoFile(int)=0;
       virtual void readheader()=0;
     };
+    void luaopen_httpd_paser(lua_State * L){
+      luaL_Reg reg[]={
+        {"paser",[](lua_State * L){
+            if(!lua_isstring(L,1))return 0;
+            if(!lua_isstring(L,2))return 0;
+            const char * ct=lua_tostring(L,2);
+            if(ct[0]=='\0' || ct[1]=='\0')return 0;
+            std::map<std::string,std::string> m;
+            requestBase::kv_paser(
+              lua_tostring(L,1),
+              ct[0],ct[1],
+              m
+            );
+            char buf[4096];
+            lua_createtable(L,0,m.size());
+            for(
+              auto it =m.begin();
+              it!=m.end();
+              it++
+            ){
+              lua_pushstring(L, it->first.c_str());
+              strcpy(buf,it->second.c_str());
+              yrssf::url_decode(buf,strlen(buf));
+              lua_pushstring(L,buf);
+              lua_settable(L, -3);
+            }
+          }
+        },
+        {NULL,NULL}
+      };
+      lua_newtable(L);
+      luaL_setfuncs(L, reg,0);
+      lua_setglobal(L,"Httppaser");
+      
+    }
   }
 }
 #endif
