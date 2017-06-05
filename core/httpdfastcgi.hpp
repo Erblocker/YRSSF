@@ -20,8 +20,6 @@
 #define      MAX_RECV_SIZE   4000
 
 #define FCGI_VERSION_1      1
-#define FCGI_PORT           9000
-#define FCGI_HOST           "127.0.0.1"
 #define FCGI_MAX_LEN        30000            //单次传输字节.  FASTCGI规定为0-65536
 #define FCGI_HEADER_LEN     8
 // 可用于type字段的值
@@ -40,6 +38,15 @@
 
 namespace yrssf{
   namespace fastcgi{
+    unsigned short FCGI_PORT=9000;
+    char  FCGI_HOST[32]="127.0.0.1";
+    void setport(unsigned short port){
+      FCGI_PORT=port;
+    }
+    void sethost(const char * addr){
+      if(strlen(addr)>=31)return;
+      strcpy(FCGI_HOST,addr);
+    }
     struct FCGI_Header{
       unsigned char version;
       unsigned char type;

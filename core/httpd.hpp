@@ -408,7 +408,7 @@ namespace yrssf{
       sprintf(buf, "such as a POST without a Content-Length.\r\n");
       send(connfd, buf, sizeof(buf), 0);
     }
-    void execute_lua(int connfd, const char *path, const char *method, const char *query_string){
+    void execute_lua(int connfd, const char *path, const char *method, const char *query_string,request * req){
       auto L=lua_newthread(gblua);
       lua_createtable(L,0,4);
       if(path){
@@ -431,6 +431,9 @@ namespace yrssf{
         lua_pushinteger(L, connfd);
         lua_settable(L, -3);
       }
+        lua_pushstring(L, "paser");
+        lua_pushinteger(L, (int)req);
+        lua_settable(L, -3);
       lua_setglobal(L,"Request");
       luaL_dofile(L,path);
       if(lua_isstring(L,-1)){
@@ -763,7 +766,7 @@ namespace yrssf{
             char ext[16];
             mimer.getext(path,ext);
             if(strcmp(ext,"lua")==0){
-              execute_lua(connfd, path, method, query_string);
+              execute_lua(connfd, path, method, query_string,&req);
             }else{
               if(config::fastcgi)
                 fastcgi::call(connfd, path, method, query_string);
@@ -883,6 +886,20 @@ namespace yrssf{
  
       return (0);
     }
+    void writemapintolua(lua_State * L,std::map<std::string,std::string> & m){
+      char buf[4096];
+      for(
+        auto it =m.begin();
+        it!=m.end();
+        it++
+      ){
+        lua_pushstring(L, it->first.c_str());
+        strcpy(buf,it->second.c_str());
+        yrssf::url_decode(buf,strlen(buf));
+        lua_pushstring(L,buf);
+        lua_settable(L, -3);
+      }
+    }
     void luaopen(lua_State * L){
       luaL_Reg reg[]={
         {"fastcgiModeOn",[](lua_State * L){
@@ -947,6 +964,87 @@ namespace yrssf{
               lua_tointeger(L,1),
               lua_tostring(L,2)
             );
+            return 0;
+          }
+        },
+        {"getpost",[](lua_State * L){
+            if(!lua_isinteger(L,1))return 0;
+            request * req=(request*)lua_tointeger(L,1);
+            lua_pushboolean(L,req->getpost());
+            return 1;
+          }
+        },
+        {"readheader",[](lua_State * L){
+            if(!lua_isinteger(L,1))return 0;
+            request * req=(request*)lua_tointeger(L,1);
+            req->readheader();
+            return 0;
+          }
+        },
+        {"writePostIntoFile",[](lua_State * L){
+            if(!lua_isinteger(L,1))return 0;
+            if(!lua_isstring (L,1))return 0;
+            request * req=(request*)lua_tointeger(L,1);
+            int fd=open(lua_tostring(L,2),O_WRONLY);
+            if(fd==-1){
+              lua_pushboolean(L,0);
+              return 1;
+            }
+            lua_pushboolean(L,req->writePostIntoFile(fd));
+            close(fd);
+            return 1;
+          }
+        },
+        {"checkpost",[](lua_State * L){
+            if(!lua_isinteger(L,1))return 0;
+            request * req=(request*)lua_tointeger(L,1);
+            lua_pushboolean(L,req->checkpost());
+            return 0;
+          }
+        },
+        {"getcookie",[](lua_State * L){
+            if(!lua_isinteger(L,1))return 0;
+            request * req=(request*)lua_tointeger(L,1);
+            lua_pushboolean(L,req->getcookie());
+            return 0;
+          }
+        },
+        {"getcookieArray",[](lua_State * L){
+            if(!lua_isinteger(L,1))return 0;
+            request * req=(request*)lua_tointeger(L,1);
+            req->cookie_decode();
+            lua_createtable(L,0,req->paseredcookie.size());
+            writemapintolua(L,req->paseredcookie);
+            return 1;
+          }
+        },
+        {"getpostArray",[](lua_State * L){
+            if(!lua_isinteger(L,1))return 0;
+            request * req=(request*)lua_tointeger(L,1);
+            req->post_decode();
+            lua_createtable(L,0,req->paseredpost.size());
+            writemapintolua(L,req->paseredpost);
+            return 1;
+          }
+        },
+        {"getqueryArray",[](lua_State * L){
+            if(!lua_isinteger(L,1))return 0;
+            request * req=(request*)lua_tointeger(L,1);
+            req->query_decode();
+            lua_createtable(L,0,req->paseredquery.size());
+            writemapintolua(L,req->paseredquery);
+            return 1;
+          }
+        },
+        {"setFastCGIHost",[](lua_State * L){
+            if(!lua_isstring(L,1))return 0;
+            fastcgi::sethost(lua_tostring(L,1));
+            return 0;
+          }
+        },
+        {"setFastCGIPort",[](lua_State * L){
+            if(!lua_isinteger(L,1))return 0;
+            fastcgi::setport(lua_tointeger(L,1));
             return 0;
           }
         },
