@@ -4,21 +4,21 @@ function codefilter(str)
   return str2
 end
 function download(sname,path)
-  local s
-  local p
+  local s=addslashes(sname)
+  local p=addslashes(path)
   insertIntoQueue("updatekey() \n"..
   "clientDownload(\""..s.."\" , \""..p.."\") ")
 end
 
 function upload(sname,path)
-  local s
-  local p
+  local s=addslashes(sname)
+  local p=addslashes(path)
   insertIntoQueue("updatekey() \n"..
   "clientUpload( \""..s.."\" , \""..p.."\" ) ")
 end
 
 function del(sname)
-  local s
+  local s=addslashes(sname)
   insertIntoQueue("updatekey() \n"..
   "clientDownload(\""..s.."\") ")
 end

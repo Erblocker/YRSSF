@@ -147,7 +147,36 @@ class API{
     return 1;
   }
   static int sqlfilter(lua_State * L){
-    const static char reps[]={'\'','"','%','\0'};
+    char *bak;
+    if(!lua_isstring(L,1))return 0;
+    const char * str=lua_tostring(L,1);
+    int len;
+    int i;
+    int j;
+    len = strlen(str);
+    bak = (char *)malloc((len * 2 + 1) * sizeof(char));
+    if(bak == NULL){
+        ysDebug("malloc failed\n");
+        return 0;
+    }
+    memset(bak, 0, len * 2 + 1);
+    
+    j = 0;
+    for(i=0; i<len; i++){
+        if((str[i] == '"') || (str[i] == '\'')){
+            bak[j] = str[i];
+            j++;
+        }
+        
+        bak[j] = str[i];
+        j++;
+    }
+    lua_pushstring(L,bak);
+    free(bak);
+    return 1;
+  }
+  static int addslashes(lua_State * L){
+    const static char reps[]={'"','\\','\0'};
     const char * istr;
     char *ostr,*sp2;
     const char * sp;
@@ -382,7 +411,9 @@ class API{
   }
   void funcreg(lua_State * L){
     lua_register(L,"clientUpload",        lua_upload);
+    lua_register(L,"addslashes",          addslashes);
     lua_register(L,"sqlfilter",           sqlfilter);
+    lua_register(L,"pathfilter",          pathfilter);
     lua_register(L,"clientDownload",      lua_download);
     lua_register(L,"clientDel",           lua_del);
     lua_register(L,"clientSetPwd",        lua_setPwd);
@@ -397,20 +428,25 @@ class API{
     lua_register(L,"cache_set",           cache::set);
     lua_register(L,"cache_delete",        cache::del);
     lua_register(L,"worker",              sworker::create);
-    /*
     lua_register(L,"gethostbyname",[](lua_State * L){
       if(!lua_isstring(L,1)) return 0;
       static std::mutex lk;
+      char str[32];
       lk.lock();
-      lua_pushstring(L,
-        inet_ntcp(
-          gethostbyname(lua_tostring(L,1))->h_addr_list
-        )
-      );
+      auto ht=gethostbyname(lua_tostring(L,1));
+      const char * p=*(ht->h_addr_list);
+      if(p){
+        lua_pushstring(L,
+          inet_ntop(
+            ht->h_addrtype,p,str,sizeof(str)
+          )
+        );
+      }else{
+        lua_pushnil(L);
+      }
       lk.unlock();
       return 1;
     });
-    */
     lua_register(L,"nodeModeOn",[](lua_State * L){
       config::nodemode=1;
       return 0;
