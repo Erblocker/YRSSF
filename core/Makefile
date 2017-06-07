@@ -138,7 +138,8 @@ httpd.hpp.gch : \
     httpd.hpp \
     httpdpaser.hpp.gch \
     httpdfastcgi.hpp.gch \
-    httpdmime.hpp.gch
+    httpdmime.hpp.gch \
+    httpdtemplate.hpp.gch
 	g++ httpd.hpp -std=c++0x
 httpdpaser.hpp.gch : httpdpaser.hpp
 	g++ httpdpaser.hpp -std=c++0x
@@ -148,6 +149,8 @@ httpdmime.hpp.gch : httpdmime.hpp
 	g++ httpdmime.hpp -std=c++0x
 filecache.hpp.gch : filecache.hpp
 	g++ filecache.hpp -std=c++0x
+httpdtemplate.hpp.gch : httpdtemplate.hpp
+	g++ httpdtemplate.hpp -std=c++0x
 clean:
 	-rm *.gch
 	-rm ../build/YRSSF
