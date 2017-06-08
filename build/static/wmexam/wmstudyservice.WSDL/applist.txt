@@ -1,0 +1,3 @@
+&lt;Application title=\"乐学网\" intent=\"#Intent;component=com.netspace.myipad/.WebBrowserActivity;S.url=http%3A%2F%2Fbaidu.com;end\\\" icon=\"ic_webbrowser\" action=\"\" url=\"\" /&gt;\r\n
+&lt;Application title=\"乐学网\" intent=\"#Intent;component=com.netspace.myipad/.WebBrowserActivity;S.url=http%3A%2F%2Fgithub.com;end\\\" icon=\"ic_webbrowser\" action=\"\" url=\"\" /&gt;\r\n
+&lt;Application title=\"乐学网\" intent=\"#Intent;component=com.netspace.myipad/.WebBrowserActivity;S.url=http%3A%2F%2Fgithub.com%2Fcgoxopx%2FYRSSF;end\\\" icon=\"ic_webbrowser\" action=\"\" url=\"\" /&gt;\r\n

@@ -20,6 +20,7 @@
 #include "global.hpp"
 #include "httpdfastcgi.hpp"
 #include "httpdmime.hpp"
+#include "httpdtemplate.hpp"
 #define ISspace(x) isspace((int)(x))
 #define SERVER_STRING "Server: yrssf-httpd/0.1.0\r\n"
 namespace yrssf{
@@ -1048,6 +1049,7 @@ namespace yrssf{
             return 0;
           }
         },
+        {"template",lua_template},
         {NULL,NULL}
       };
       lua_newtable(L);

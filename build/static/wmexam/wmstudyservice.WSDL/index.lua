@@ -5,18 +5,8 @@ Httpd.write(Request.fd,
   "Cache-Control:no-cache\r\n"..
   "\r\n")
 local path="./static/wmexam/wmstudyservice.WSDL/text.xml"
-print(path)
-local file=io.open(path,"r")
-local mark=file:read(0)
-  local pbk
-  while mark do
-    pbk =file:read("*line")
-    if pbk then
-      Httpd.write(Request.fd,pbk)
-    end
-    mark=file:read(0)
-    if not mark then
-      break
-    end
-  end
-io.close(file)
+
+local file=io.open("./static/wmexam/wmstudyservice.WSDL/applist.txt","r")
+local applist=file:read("*a")
+file:close()
+Httpd.template(Request.fd,path,{{"applist",applist}});
