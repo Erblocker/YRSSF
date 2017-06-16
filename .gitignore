@@ -13,6 +13,7 @@
 *.gch
 *.pyc
 *.db
+*debug
 YRSSF
 /core/lwan/build/*
 /core/leveldb/out-shared/*

@@ -28,6 +28,7 @@ namespace yrssf{
     bool autoboardcast=0;
     bool liveputout   =1;
     unsigned int httpBodyLength=65536;
+    unsigned int maxRequest=16;
   }
   lua_State * gblua;
   std::mutex clientlocker;

@@ -21,10 +21,12 @@
 #include "httpdfastcgi.hpp"
 #include "httpdmime.hpp"
 #include "httpdtemplate.hpp"
+#include <atomic>
 #define ISspace(x) isspace((int)(x))
 #define SERVER_STRING "Server: yrssf-httpd/0.1.0\r\n"
 namespace yrssf{
   namespace httpd{
+    std::atomic<int> thread_number(0);
     bool file_exist(const char * path){
       if(access(path,F_OK)==0)
         return 1;
@@ -445,7 +447,9 @@ namespace yrssf{
         lua_pushinteger(L, (int)req);
         lua_settable(L, -3);
       lua_setglobal(L,"Request");
+      //ysDebug("create env fd:%d",connfd);
       luaL_dofile(L,path);
+      //ysDebug("execute fd:%d",connfd);
       if(lua_isstring(L,-1)){
         std::cout<<lua_tostring(L,-1)<<std::endl;
       }
@@ -567,6 +571,12 @@ namespace yrssf{
       }
     }
     void accept_request(int connfd){
+      thread_number++;
+      if(thread_number>config::maxRequest){
+        thread_number--;
+        close(connfd);
+        return;
+      }
       char buf[1024]; //缓冲从socket中读取的字节
       int numchars; //读取字节数
       char method[255]; //请求方法
@@ -599,6 +609,7 @@ namespace yrssf{
         unimplemented(connfd);
 
         close(connfd); //TODO 在调用没有实现的方法后没有关闭链接,这里要把connfd关闭
+        thread_number--;
 
         return;
       }
@@ -675,6 +686,7 @@ namespace yrssf{
             ysDebug("forbidden:%s query=%s",path,req.query);
             forbidden(connfd);
             close(connfd);
+            thread_number--;
             return;
           }
         }
@@ -685,6 +697,7 @@ namespace yrssf{
             ysDebug("forbidden:%s query=%s",path,req.query);
             forbidden(connfd);
             close(connfd);
+            thread_number--;
             return;
           }
         }
@@ -696,9 +709,9 @@ namespace yrssf{
         ysDebug("handler:%s query=%s",path,req.query);
         cb(&req);
         close(connfd);
+        thread_number--;
         return;
       }
-      //ysDebug("debug");
 
       //将url字符串(只包含url,参数已经被截断了)，拼接在字符串htdocs的后面之后就输出存储到path中。
       //因为url的第一个字符是/，所以不用加/
@@ -706,6 +719,7 @@ namespace yrssf{
         readBufferBeforeSend(connfd);
         bad_request(connfd);
         close(connfd);
+        thread_number--;
         return;
       }
       
@@ -716,7 +730,6 @@ namespace yrssf{
         findindex(path);
       }
       
-      //ysDebug("debug");
 
       //ysDebug("path:%s",path);
       //在系统上去查询该文件是否存在
@@ -728,6 +741,7 @@ namespace yrssf{
         readBufferBeforeSend(connfd);
         bad_request(connfd);
         close(connfd);
+        thread_number--;
         return;
       }
       
@@ -764,7 +778,7 @@ namespace yrssf{
             cgi = 0;
         }
         
-        //ysDebug("debug");
+        //ysDebug("fd:%d",connfd);
 
         if (!cgi) {
             //静态解析
@@ -787,6 +801,8 @@ namespace yrssf{
       }
             
       close(connfd);
+      thread_number--;
+      //ysDebug("close fd:%d",connfd);
     }
     void error_die(const char *sc){
       // #include <stdio.h>,void perror(char *string);
@@ -925,6 +941,12 @@ namespace yrssf{
         {"setMaxContentLen",[](lua_State * L){
             if(!lua_isinteger(L,1))return 0;
             config::httpBodyLength=lua_tointeger(L,1);
+            return 0;
+          }
+        },
+        {"setMaxRequest",[](lua_State * L){
+            if(!lua_isinteger(L,1))return 0;
+            config::maxRequest=lua_tointeger(L,1);
             return 0;
           }
         },
