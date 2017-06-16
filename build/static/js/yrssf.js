@@ -17,6 +17,9 @@ var source={
   "user"    :"",
   "sname"   :""
 };
+function playthemesong(){
+  document.getElementById('#themesong').play();
+}
 function getsource(){
   $.get("ajax?gettoken=1",function(data){
     try{
