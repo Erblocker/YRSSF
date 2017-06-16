@@ -98,7 +98,7 @@ class API{
   public:
   API(){
     db=NULL;
-    ysDebug("\033[40;43mYRSSF:\033[0mdatabase loading...\n");
+    ysDebug("database loading...\n");
     sqlite3_config(SQLITE_CONFIG_MULTITHREAD);
     int ret = sqlite3_open("./data/yrssf.db", &db);
     if( ret != SQLITE_OK ) {
@@ -455,6 +455,22 @@ class API{
       config::nodemode=0;
       return 0;
     });
+    lua_register(L,"autoboardcastModeOn",[](lua_State * L){
+      config::autoboardcast=1;
+      return 0;
+    });
+    lua_register(L,"autoboardcastModeOff",[](lua_State * L){
+      config::autoboardcast=0;
+      return 0;
+    });
+    lua_register(L,"liveputoutModeOn",[](lua_State * L){
+      config::liveputout=1;
+      return 0;
+    });
+    lua_register(L,"liveputoutModeOff",[](lua_State * L){
+      config::liveputout=0;
+      return 0;
+    });
     lua_register(L,"GLOBAL_read",[](lua_State * L){
       return lglobal.read(L);
     });
@@ -670,7 +686,6 @@ class Init{
   }
   void run(){
     pthread_t newthread;
-    ysDebug("\033[40;43mYRSSF:\033[0m");
     ysDebug("\033[40;36mYRSSF create thread\033[0m\n");
     if(pthread_create(&newthread,NULL,runServerThread,NULL)!=0)
       perror("pthread_create");
@@ -681,7 +696,7 @@ class Init{
     getcwd(sbuffer,PATH_MAX);
     if(pthread_create(&newthread,NULL,liveserver,NULL)!=0)
       perror("pthread_create");
-    ysDebug("\033[40;43mYRSSF:\033[0m\033[40;36mYRSSF init\033[0m\n");
+    ysDebug("\033[40;36mYRSSF init\033[0m\n");
     gblua=luaL_newstate();
     luaL_openlibs(gblua);
     lua_pushinteger(gblua,(int)&server);
@@ -792,6 +807,7 @@ class Automanager{
   public:
   Automanager(){
     pthread_t newthread;
+    ysDebug("init");
     if(pthread_create(&newthread,NULL,freeunique,NULL)!=0)
       perror("pthread_create");
     if(pthread_create(&newthread,NULL,freemems,NULL)!=0)

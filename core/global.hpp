@@ -20,11 +20,13 @@ extern "C" {
   printf("\n");
 namespace yrssf{
   namespace config{
-    bool AllowShell =0;
-    bool checkSign  =0;
-    bool nodemode   =0;
-    bool stop       =0;
-    bool fastcgi    =0;
+    bool AllowShell   =0;
+    bool checkSign    =0;
+    bool nodemode     =0;
+    bool stop         =0;
+    bool fastcgi      =0;
+    bool autoboardcast=0;
+    bool liveputout   =1;
     unsigned int httpBodyLength=65536;
   }
   lua_State * gblua;

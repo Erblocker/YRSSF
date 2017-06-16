@@ -227,6 +227,9 @@ class Client:public Server{
         if(from.s_addr==parIP.s_addr && port==parPort){
           if(!ysDB.logunique(buf.header.userid(),buf.header.unique)) continue;
           if(buf.header.mode!=_LIVE)continue;
+          if(config::autoboardcast){
+            live(&buf);
+          }
           if(!callback(&(buf.source),buf.size(),arg))return;
         }
       }

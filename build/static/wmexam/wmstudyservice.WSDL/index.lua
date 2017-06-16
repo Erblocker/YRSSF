@@ -9,4 +9,4 @@ local path="./static/wmexam/wmstudyservice.WSDL/text.xml"
 local file=io.open("./static/wmexam/wmstudyservice.WSDL/applist.txt","r")
 local applist=file:read("*a")
 file:close()
-Httpd.template(Request.fd,path,{{"applist",applist}});
+Httpd.template(Request.fd,path,{{"applist",applist}})

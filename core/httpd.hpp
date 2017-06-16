@@ -416,6 +416,15 @@ namespace yrssf{
         lua_pushstring(L, "path");
         lua_pushstring(L, path);
         lua_settable(L, -3);
+        char p2[512];
+        strcpy(p2,path);
+        char * pt=strrchr(p2,'/');
+        if(pt){
+          *pt='\0';
+          lua_pushstring(L, "dir");
+          lua_pushstring(L, p2);
+          lua_settable(L, -3);
+        }
       }
       if(query_string){
         lua_pushstring(L, "query");
@@ -975,6 +984,13 @@ namespace yrssf{
             return 1;
           }
         },
+        {"init",[](lua_State * L){
+            if(!lua_isinteger(L,1))return 0;
+            request * req=(request*)lua_tointeger(L,1);
+            req->init();
+            return 0;
+          }
+        },
         {"readheader",[](lua_State * L){
             if(!lua_isinteger(L,1))return 0;
             request * req=(request*)lua_tointeger(L,1);
@@ -1016,6 +1032,15 @@ namespace yrssf{
             req->cookie_decode();
             lua_createtable(L,0,req->paseredcookie.size());
             writemapintolua(L,req->paseredcookie);
+            return 1;
+          }
+        },
+        {"getheaderArray",[](lua_State * L){
+            if(!lua_isinteger(L,1))return 0;
+            request * req=(request*)lua_tointeger(L,1);
+            req->cookie_decode();
+            lua_createtable(L,0,req->paseredcookie.size());
+            writemapintolua(L,req->paseredheader);
             return 1;
           }
         },

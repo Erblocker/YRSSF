@@ -47,7 +47,15 @@ function getcontrol()
   return true
 end
 function router()
+  if GET["gettoken"]=="1" then
+    local rdn=(math.random()*1000000000)
+    rdn=math.floor(rdn)
+    logUnique(0,rdn)
+    RESULT="Token:"..rdn
+    return
+  end
   if not getcontrol() then
+    RESULT="Empty Request"
     return
   end
   if controlCofig[4]=="1" then
@@ -56,10 +64,7 @@ function router()
   if controlCofig[6]=="1" then
     local token=math.tointeger(GET["token"])
     if not uniqueExist(0,token) then
-      local rdn=(math.random()*1000000000)
-      rdn=math.floor(rdn)
-      logUnique(0,rdn)
-      RESULT="Token:"..rdn
+      RESULT="Token Error"
       return
     end
   end

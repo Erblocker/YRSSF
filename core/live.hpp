@@ -11,7 +11,9 @@ namespace yrssf{
 int livefifo;
 int liveserverfifo;
 static bool runliveclient_cb(void * data,int size,void*){
-  write(livefifo,data,size>SOURCE_CHUNK_SIZE?SOURCE_CHUNK_SIZE:size);
+  if(config::liveputout){
+    write(livefifo,data,size>SOURCE_CHUNK_SIZE?SOURCE_CHUNK_SIZE:size);
+  }
   return 1;
 }
 static void * runliveclient_th(void *){
