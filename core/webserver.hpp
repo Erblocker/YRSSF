@@ -2,8 +2,10 @@
 #define yrssf_core_webserver
 #include "client.hpp"
 #include "httpd.hpp"
+#include "global.hpp"
 void ajax(yrssf::httpd::request * req){
-    lua_State * L=lua_newthread(yrssf::gblua);
+    auto Lp=yrssf::luapool::Create();
+    lua_State * L=Lp->L;
     
     char buf[4096];
     
@@ -92,6 +94,7 @@ void ajax(yrssf::httpd::request * req){
     }else{
       yrssf::httpd::writeStr(req->fd,"NULL");
     }
+    yrssf::luapool::Delete(Lp);
 }
 void webserverRun(){
     yrssf::httpd::addrule(ajax,"/ajax");

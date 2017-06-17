@@ -96,7 +96,7 @@ class Server:public ysConnection{
     w.lock();
     sleep(3);
     w.unlock();
-    ysDebug("\033[40;43mYRSSF:\033[0mserver shutdown success\n");
+    ysDebug("server shutdown success\n");
   }
   static void* accept_req(void * req){
     require * r=(require*)req;
@@ -108,7 +108,7 @@ class Server:public ysConnection{
   void runServer(){
     require * r;
     w.lock();
-    std::cout << "\033[40;43mYRSSF:\033[0mserver running on \0"<<ntohs(server_addr.sin_port)<< std::endl;
+    ysDebug("server running on %d",ntohs(server_addr.sin_port));
     r=pool.get();
     r->self=this;
     while(isrunning){

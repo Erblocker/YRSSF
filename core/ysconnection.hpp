@@ -292,7 +292,8 @@ class ysConnection:public serverBase{
     auto query=(netQuery*)data;
     char buffer[17];
     buffer[16]='\0';
-    lua=lua_newthread(gblua);
+    auto Lp=luapool::Create();
+    lua=Lp->L;
     char ipbuf[32];
     inttoip(from,ipbuf);
     lua_pushstring (lua,ipbuf);
@@ -346,6 +347,7 @@ class ysConnection:public serverBase{
         result->str2[i]=ostr[i];
     }
     lua_pop(lua,1);
+    luapool::Delete(Lp);
   }
   virtual bool run(in_addr from,short port,void * data){
     std::string userinfo;

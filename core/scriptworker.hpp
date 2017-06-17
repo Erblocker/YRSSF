@@ -18,7 +18,8 @@ namespace yrssf{
     };
     void * create_s(void * s){
       auto self=(worker*)s;
-      auto L=lua_newthread(gblua);
+      auto Lp=luapool::Create();
+      auto L=Lp->L;
       std::string & script=self->str;
       if(luaL_loadbuffer(
           L,
@@ -30,6 +31,7 @@ namespace yrssf{
         if(lua_isstring(L,-1))
           ysDebug("%s",lua_tostring(L,-1));
       }
+      luapool::Delete(Lp);
       delete self;
     }
     int create(lua_State * L){

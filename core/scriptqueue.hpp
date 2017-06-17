@@ -25,7 +25,8 @@ namespace yrssf{
     bool doscript(){
       const char * script;
       if(q.empty())return 0;
-      lua_State * L=lua_newthread(gblua);
+      auto Lp=luapool::Create();
+      lua_State * L=Lp->L;
       locker.lock();
       std::string str=q.front();
       script=str.c_str();
@@ -41,6 +42,7 @@ namespace yrssf{
         if(lua_isstring(L,-1))
           ysDebug("%s",lua_tostring(L,-1));
       }
+      luapool::Delete(Lp);
       return 1;
     }
     void stop(){

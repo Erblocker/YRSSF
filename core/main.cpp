@@ -480,6 +480,32 @@ class API{
     lua_register(L,"GLOBAL_delete",[](lua_State * L){
       return lglobal.del(L);
     });
+    lua_register(L,"LDATA_read",[](lua_State * L){
+      if(!lua_isstring(L,1))return 0;
+      std::string src;
+      ysDB.ldata->Get(leveldb::ReadOptions(),
+        lua_tostring(L,1),
+        &src
+      );
+      lua_pushstring(L,src.c_str());
+      return 1;
+    });
+    lua_register(L,"LDATA_set",[](lua_State * L){
+      if(!lua_isstring(L,1))return 0;
+      if(!lua_isstring(L,2))return 0;
+      lua_pushboolean(L,ysDB.ldata->Put(leveldb::WriteOptions(),
+        lua_tostring(L,1),
+        lua_tostring(L,2)
+      ).ok());
+      return 1;
+    });
+    lua_register(L,"LDATA_delete",[](lua_State * L){
+      if(!lua_isstring(L,1))return 0;
+      lua_pushboolean(L,ysDB.ldata->Delete(leveldb::WriteOptions(),
+        lua_tostring(L,1)
+      ).ok());
+      return 1;
+    });
     lua_register(L,"hex2num",[](lua_State * L){
       if(!lua_isstring(L,1)) return 0;
       const char * str=lua_tostring(L,1);
@@ -679,6 +705,20 @@ class API{
     luaopen_ysfunc(L);
   }
 }api;
+static void luaopen_yrssf_std(lua_State * L){
+  char sbuffer[PATH_MAX];
+  getcwd(sbuffer,PATH_MAX);
+    luaL_openlibs      (L);
+    lua_pushinteger    (L,(int)&server);
+    lua_setglobal      (L,"_SERVER");
+    lua_pushinteger    (L,(int)&client);
+    lua_setglobal      (L,"_CLIENT");
+    lua_pushstring     (L,sbuffer);
+    lua_setglobal      (L,"APP_PATH");
+  ysConnection::funcreg(L);
+  api.funcreg(L);
+  
+}
 class Init{
   public:
   static void* runServerThread(void*){
@@ -691,33 +731,24 @@ class Init{
       perror("pthread_create");
   }
   Init(){
+    luapool::reg.push_back(luaopen_yrssf_std);
     pthread_t newthread;
-    char sbuffer[PATH_MAX];
-    getcwd(sbuffer,PATH_MAX);
     if(pthread_create(&newthread,NULL,liveserver,NULL)!=0)
       perror("pthread_create");
     ysDebug("\033[40;36mYRSSF init\033[0m\n");
-    gblua=luaL_newstate();
-    luaL_openlibs(gblua);
-    lua_pushinteger(gblua,(int)&server);
-    lua_setglobal(gblua,"_SERVER");
-    lua_pushinteger(gblua,(int)&client);
-    lua_setglobal(gblua,"_CLIENT");
-    lua_pushstring(gblua,sbuffer);
-    lua_setglobal(gblua,"APP_PATH");
-    ysConnection::funcreg(gblua);
-    api.funcreg(gblua);
     scriptqueuerun();
-    luaL_dofile(gblua,"init.lua");
-    if(lua_isstring(gblua,-1)){
-      std::cout<<lua_tostring(gblua,-1)<<std::endl;
+    auto Lp=luapool::Create();
+    auto L=Lp->L;
+    luaL_dofile(L,"init.lua");
+    if(lua_isstring(L,-1)){
+      std::cout<<lua_tostring(L,-1)<<std::endl;
     }
+    luapool::Delete(Lp);
   }
   ~Init(){
-    ysDebug("\033[40;43mYRSSF:\033[0m\033[40;36mYRSSF server shutdown\033[0m\n");
+    ysDebug("\033[40;36mYRSSF server shutdown\033[0m\n");
     server.shutdown();
     scriptqueue.stop();
-    lua_close(gblua);
   }
 }init;
 ///////////////////////////
@@ -741,10 +772,6 @@ extern "C" void loadAPI(lua_State * L){
 extern "C" int luaopen_yrssf(lua_State * L){
     loadAPI(L);
     return 1;
-}
-extern "C" void dofile(const char * path){
-    lua_State * L=lua_newthread(yrssf::gblua);
-    luaL_dofile(L,path);
 }
 int main(){
     ysDebug("init...");

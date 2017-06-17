@@ -428,7 +428,8 @@ namespace yrssf{
       send(connfd, buf, sizeof(buf), 0);
     }
     void execute_lua(int connfd, const char *path, const char *method, const char *query_string,request * req){
-      auto L=lua_newthread(gblua);
+      auto Lp=luapool::Create();
+      auto L=Lp->L;
       lua_createtable(L,0,4);
       if(path){
         lua_pushstring(L, "path");
@@ -469,11 +470,12 @@ namespace yrssf{
       if(lua_isstring(L,-1)){
         std::cout<<lua_tostring(L,-1)<<std::endl;
       }
+      luapool::Delete(Lp);
     }
     void execute_cgi(int connfd, const char *path, const char *method, const char *query_string){
       char buf[1024];
       int cgi_output[2]; //重定向输出的管道
-      int cgi_input[2]; //重定向输入的管道
+      int cgi_input[2];  //重定向输入的管道
       pid_t pid;
       int status;
       int i;

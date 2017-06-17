@@ -7,3 +7,5 @@ function setusercookie(uname,pwd)
   Httpd.write(Request.fd,"Set-Cookie:uname="..uname..";path=/;")
   Httpd.write(Request.fd,"Set-Cookie:pwd="..pwd..";path=/;")
 end
+local keyname="user_"..get[uid]
+local value=LDATA_read(keyname)

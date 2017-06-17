@@ -21,6 +21,7 @@ class YsDB{
   leveldb::DB *              sourceBoardcast;
   leveldb::DB *              sourceUser;
   leveldb::DB *              keys;
+  leveldb::DB *              ldata;
   std::list<location>        livelist;
   leveldb::DB *              unique;
   RWMutex                    locker;
@@ -56,6 +57,7 @@ class YsDB{
     assert(leveldb::DB::Open(options, "data/sourceBoardcast", &sourceBoardcast).ok());
     assert(leveldb::DB::Open(options, "data/keys", &keys).ok());
     assert(leveldb::DB::Open(options, "data/unique", &unique).ok());
+    assert(leveldb::DB::Open(options, "data/ldata", &ldata).ok());
   }
   ~YsDB(){
     delete user;
@@ -65,6 +67,7 @@ class YsDB{
     delete sourceUser;
     delete keys;
     delete unique;
+    delete ldata;
   }
   void liveAdd(location & address){
     livelocker.Wlock();

@@ -262,9 +262,21 @@ namespace videolive{
     float resizex,resizey;
     pixel buffer[600][500];
     struct Updatelog{
-      unsigned int times;
+      unsigned int times,ct;
       Updatelog(){
-        times=0;
+        this->times=0;
+      }
+      bool needsend(){
+        double u=(double)ct;
+        double d=300.0d;
+        if((u/d)>config::livepresent){
+          return 1;
+        }else{
+          return 0;
+        }
+      }
+      void count(){
+        ct++;
       }
     }updatelog[40][25];
     unsigned int times;
@@ -286,8 +298,13 @@ namespace videolive{
         buffer[x][y].R!=px->R ||
         buffer[x][y].G!=px->G ||
         buffer[x][y].B!=px->B
-      )
-        updatelog[x][y].times=this->times;
+      ){
+        if(updatelog[x][y].times!=this->times){
+          updatelog[x][y].times=this->times;
+          updatelog[x][y].ct=0;  //重置计数器
+        }
+        updatelog[x][y].count();
+      }
       buffer[x][y].R=px->R;
       buffer[x][y].G=px->G;
       buffer[x][y].B=px->B;
@@ -365,7 +382,7 @@ namespace videolive{
       }
       for(ix=0;ix<40;ix++)
       for(iy=0;iy<25;iy++){
-        if(updatelog[ix][iy].times==times){
+        if(updatelog[ix][iy].times==times && updatelog[ix][iy].needsend()){
           bufp->m='i';
           bufp->x=ix;
           bufp->y=iy;

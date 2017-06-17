@@ -13,17 +13,17 @@
 *  可通过web管理（<u>但是不能https</u>）  
 *  支持cgi和fastcgi（可以直接移植php项目什么的了）  
 *  目前尚不支持Windows，可通过VNC来使用Windows程序  
-## 文档：  ##
+## 文档：  ##  
 [APIs](build)  
-## 警告：  ##
+## 警告：  ##  
 lock目录下的东西极度危险！极度危险！极度危险！重要的事说三遍  
 经测试，在原版linux下可导致[百度](https://www.baidu.com)等常见网站DNS解析错误，并且会自动关闭大多数端口  
 在android下会同时卸载包括<u>蓝牙</u>在内的大多数系统app，并且结束未允许的用户app的进程（具体效果见睿易派）  
 如果不需要限制设备功能（比如说防止学生用平板电脑打游戏……），请不要在lock目录里面乱make，否则后果很严重……  
 如果真的make了，在里面`make clean`一下可以解除<u>锁机</u>效果  
 此工具请勿用于非法用途，否则后果自负  
-## 编译： ##
-### Linux: ###
+## 编译： ##  
+### Linux: ###  
 #### 下载并编译：  
 ` $ git clone https://github.com/cgoxopx/YRSSF `  
 ` $ cd YRSSF && make `  
@@ -43,8 +43,8 @@ lock目录下的东西极度危险！极度危险！极度危险！重要的事�
 #### 结束进程（如果需要的话）：  
 ` $ killall YRSSF launcher daemon`  
 launcher和daemon会相互保护，单独结束其中任意一个都会被另一个复活  
-### Android编译： ###
-#### 动态编译： ####
+### Android编译： ###  
+#### 动态编译： ####  
 本项目需要下列so文件，请自行准备  
 *   Tag        Type                         Name/Value
 *  0x00000001 (NEEDED)                     Shared library: [libdl.so.2]
@@ -56,14 +56,14 @@ launcher和daemon会相互保护，单独结束其中任意一个都会被另一
 *  0x00000001 (NEEDED)                     Shared library: [libgcc_s.so.1]
 *  0x00000001 (NEEDED)                     Shared library: [libpthread.so.0]
 *  0x00000001 (NEEDED)                     Shared library: [libc.so.6]
-#### 静态编译： ####
+#### 静态编译： ####  
 进入core目录，`make android`  
-## 插件开发： ##
+## 插件开发： ##  
 编译完成后，/build 整个目录可以直接复制出来在其他位置执行  
 /build/static 为www目录（存放网页以及cgi文件）  
 /build/live   下的文件为直播的管道文件  
 /build/static 目录支持cgi文件或者php文件，但是使用cgi文件时请注意：如果cgi程序有错误，http服务器关闭时会直接`Segmentation fault`（这似乎是cgi的通病）  
-# 鸣谢 # 
+# 鸣谢 #   
 *  lua  
 *  lua-cjson  
 *  leveldb  

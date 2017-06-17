@@ -5,6 +5,7 @@ all:../build/YRSSF
     client.hpp.gch        \
     crypt.hpp.gch         \
     daemon.hpp.gch        \
+    luapool.hpp.gch       \
     global.hpp.gch        \
     func.hpp.gch          \
     live.hpp.gch          \
@@ -78,7 +79,6 @@ android : .dep
 	 -ljpeg                            \
 	 -lssl                             \
 	 -lcrypto                          \
-	 -Wl,-dynamic-linker=/system/lib/ld-linux.so.3 \
 	 -o ../build/YRSSF
 ./zlib/libz.a :
 	cd zlib       && make
@@ -151,6 +151,8 @@ filecache.hpp.gch : filecache.hpp
 	g++ filecache.hpp -std=c++0x
 httpdtemplate.hpp.gch : httpdtemplate.hpp
 	g++ httpdtemplate.hpp -std=c++0x
+luapool.hpp.gch : luapool.hpp
+	g++ luapool.hpp -std=c++0x
 clean:
 	-rm *.gch
 	-rm ../build/YRSSF
