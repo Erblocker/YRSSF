@@ -10,6 +10,7 @@
 #include <errno.h>
 #include <string.h>
 #include <stdio.h>
+#include <mutex>
 namespace yrssf{
   namespace threadpool{
     typedef struct tpool_work {
@@ -19,6 +20,7 @@ namespace yrssf{
     }tpool_work_t;
     class tw_pool{
       tpool_work_t * freed;
+      std::mutex locker;
       public:
       tw_pool(){
         freed=NULL;
@@ -33,17 +35,22 @@ namespace yrssf{
         }
       }
       tpool_work_t * get(){
+        locker.lock();
         if(freed){
           tpool_work_t * r=freed;
           freed=freed->next;
+          locker.unlock();
           return r;
         }else{
+          locker.unlock();
           return new tpool_work_t;
         }
       }
       void del(tpool_work_t * f){
+        locker.lock();
         f->next=freed;
         freed=f;
+        locker.unlock();
       }
     }tpl;
     typedef struct tpool {

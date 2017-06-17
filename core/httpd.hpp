@@ -21,6 +21,9 @@
 #include "httpdfastcgi.hpp"
 #include "httpdmime.hpp"
 #include "httpdtemplate.hpp"
+extern "C"{
+#include <zlib.h>
+}
 #include <atomic>
 #define ISspace(x) isspace((int)(x))
 #define SERVER_STRING "Server: yrssf-httpd/0.1.0\r\n"
@@ -234,6 +237,19 @@ namespace yrssf{
     }
     void writeStr(int connfd,const char * str){
       send(connfd, str, strlen(str), 0);
+    }
+    void sendCompressed(int connfd,const void * data,int len){
+      Bytef * buf=NULL;
+      auto blen = compressBound(len);
+      if((buf = (Bytef*)malloc(sizeof(char) * blen)) == NULL){
+        return;
+      }
+      if(compress(buf, &blen, (Bytef*)data, len) != Z_OK){
+        free(buf);
+        return;
+      }
+      send(connfd,buf,blen,0);
+      free(buf);
     }
     int get_line(int sock, char *buf, int size){
       int i = 0;

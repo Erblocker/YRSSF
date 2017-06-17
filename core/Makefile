@@ -56,7 +56,7 @@ all:../build/YRSSF
 	 -lcrypto                          \
 	 -o ../build/YRSSF
 android : .dep
-	g++ main.cpp                       \
+	g++ main.cpp -static               \
 	 -pthread                          \
 	 ./leveldb/out-static/libleveldb.a \
 	 ./leveldb/out-static/libmemenv.a  \
@@ -67,7 +67,7 @@ android : .dep
 	 ./lua-cjson/strbuf.o              \
 	 ./lua-cjson/fpconv.o              \
 	 ./sqlite/sqlite3.o                \
-	 -ldl                              \
+	 -Wl,-Bdynamic,-ldl                \
 	 -DWEB1                            \
 	 -I ./lua/src                      \
 	 -I ./leveldb/include              \
@@ -140,7 +140,7 @@ httpd.hpp.gch : \
     httpdfastcgi.hpp.gch \
     httpdmime.hpp.gch \
     httpdtemplate.hpp.gch
-	g++ httpd.hpp -std=c++0x
+	g++ httpd.hpp -std=c++0x -I ./zlib
 httpdpaser.hpp.gch : httpdpaser.hpp
 	g++ httpdpaser.hpp -std=c++0x
 httpdfastcgi.hpp.gch : httpdfastcgi.hpp

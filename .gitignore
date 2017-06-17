@@ -26,3 +26,4 @@ YRSSF
 /build/lock
 /build/install.lock
 /test/*
+/Android/yrssf_bin/*
