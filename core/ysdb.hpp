@@ -6,6 +6,7 @@
 #include "leveldb/write_batch.h"
 #include <list>
 #include <map>
+#include <set>
 #include "classes.hpp"
 #include "rwmutex.hpp"
 #include "crypt.hpp"
@@ -22,10 +23,11 @@ class YsDB{
   leveldb::DB *              sourceUser;
   leveldb::DB *              keys;
   leveldb::DB *              ldata;
-  std::list<location>        livelist;
+  std::set<location>         livelist;
   leveldb::DB *              unique;
   RWMutex                    locker;
   RWMutex                    livelocker;
+  RWMutex                    livelistlocker;
 /*
 * format:
 **************************************************************
@@ -69,9 +71,16 @@ class YsDB{
     delete unique;
     delete ldata;
   }
-  void liveAdd(location & address){
+  void liveAdd(const location & address){
     livelocker.Wlock();
-    livelist.push_back(address);
+    livelist.insert(address);
+    livelocker.unlock();
+  }
+  void liveRemove(const location & address){
+    livelocker.Wlock();
+    auto it=livelist.find(address);
+    if(it!=livelist.end())
+      livelist.erase(address);
     livelocker.unlock();
   }
   void liveClean(){
@@ -79,12 +88,13 @@ class YsDB{
     livelist.clear();
     livelocker.unlock();
   }
-  void live(void(*callback)(location &,void*),void * arg){
+  void live(void(*callback)(const location &,void*),void * arg){
     livelocker.Rlock();
-    std::list<location>::iterator it;
-    for(it=livelist.begin();it!=livelist.end();it++){
+    
+    for(auto it=livelist.begin();it!=livelist.end();it++){
       callback(*it,arg);
     }
+    
     livelocker.unlock();
   }
   bool getkey(int32_t uid,aesblock * key){

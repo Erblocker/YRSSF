@@ -36,6 +36,8 @@ extern "C" {
 #define _REGISTER        0xAF
 #define _CERT            0xB0
 #define _GET_PUBLIC_KEY  0xB1
+#define _LIVE_B          0xB2
+#define _LIVE_E          0xB3
 namespace yrssf{
 class location{
   public:
@@ -45,6 +47,10 @@ class location{
     ip.s_addr = htonl(INADDR_ANY); 
     port = 0; 
   }
+  location(in_addr a,short p){
+    ip=a;
+    port=p;
+  }
   location(const location & i){
     ip=i.ip;
     port=i.port;
@@ -53,6 +59,27 @@ class location{
     ip=i.ip;
     port=i.port;
     return *this;
+  }
+  int64_t tolongnum()const{
+    int64_t n,b1,b2;
+    int64_t a=ip.s_addr;
+    int64_t p=port;
+    b1=(((a) & 0xffffffff)<<32);
+    b2=p & 0xffffffff;
+    n=b1 | b2;
+    return n;
+  }
+  bool operator==(const location & i)const{
+    return ((this->tolongnum())==(i.tolongnum()));
+  }
+  bool operator!=(const location & i)const{
+    return !((*this)==i);
+  }
+  bool operator<(const location & i)const{
+    return ((this->tolongnum())<(i.tolongnum()));
+  }
+  bool operator>(const location & i)const{
+    return ((this->tolongnum())>(i.tolongnum()));
   }
 };
 struct netHeader{

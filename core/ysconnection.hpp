@@ -795,6 +795,14 @@ class ysConnection:public serverBase{
         
         send(from,port,&respk,sizeof(respk));
       break;
+      case _LIVE_B:
+        ysDB.liveAdd(location(from,port));
+        succeed(from,port,header->unique);
+      break;
+      case _LIVE_E:
+        ysDB.liveRemove(location(from,port));
+        succeed(from,port,header->unique);
+      break;
       case _SUCCEED: break;
       case _FAIL   : break;
     }
@@ -908,10 +916,12 @@ class ysConnection:public serverBase{
         respk->header.mode=_LIVE;
         respk->header.crypt='f';
     }
-    for(std::list<location>::iterator it=ysDB.livelist.begin();it!=ysDB.livelist.end();it++){
+    ysDB.livelocker.Rlock();
+    for(auto it=ysDB.livelist.begin();it!=ysDB.livelist.end();it++){
       for(i=0;i<4;i++)
         send(it->ip,it->port,&respk,sizeof(respk));
     }
+    ysDB.livelocker.unlock();
   }
 };
 }

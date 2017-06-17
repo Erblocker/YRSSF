@@ -39,6 +39,38 @@ class Client:public Server{
     }
     return 0;
   }
+  void liveBegin(){
+    netQuery  qypk;
+    
+    qypk.header.mode=_LIVE_B;
+    qypk.header.userid=myuserid;
+    
+    int rdn=randnum();
+    qypk.header.unique=rdn;
+    
+    wristr(mypassword,qypk.header.password);
+    
+    if(iscrypt)crypt_encode(&qypk,&key);
+    
+    for(int i=0;i<8;i++)
+      send(parIP,parPort,&qypk,sizeof(qypk));
+  }
+  void liveEnd(){
+    netQuery  qypk;
+    
+    qypk.header.mode=_LIVE_E;
+    qypk.header.userid=myuserid;
+    
+    int rdn=randnum();
+    qypk.header.unique=rdn;
+    
+    wristr(mypassword,qypk.header.password);
+    
+    if(iscrypt)crypt_encode(&qypk,&key);
+    
+    for(int i=0;i<8;i++)
+      send(parIP,parPort,&qypk,sizeof(qypk));
+  }
   bool getPbk(){
     netSource qypk;
     netSource buf;
@@ -50,7 +82,8 @@ class Client:public Server{
     qypk.header.userid=myuserid;
     int rdn=randnum();
     qypk.header.unique=rdn;
-    wristr(mypassword,qypk.header.password);
+    //wristr(mypassword,qypk.header.password);
+    //获取公钥不需要密码
     if(iscrypt)crypt_encode(&qypk,&key);
     for(i=0;i<10;i++){
       send(parIP,parPort,&qypk,sizeof(qypk));
@@ -132,14 +165,14 @@ class Client:public Server{
     qypk.header.userid=myuserid;
     int rdn=randnum();
     qypk.header.unique=rdn;
-    wristr(mypassword,qypk.header.password);
-    
+    //wristr(mypassword,qypk.header.password);
+    //认证，密码在证书里面
     if(!getPbk())return 0;
     
     auto tR=(netReg*)respk.source;
     memcpy(tR->key,parpbk,ECDH_SIZE);
     tR->encrypt();
-    
+    //对数据进行非对称加密
     if(iscrypt)crypt_encode(&qypk,&key);
     for(i=0;i<10;i++){
       send(parIP,parPort,&qypk,sizeof(qypk));
@@ -220,6 +253,7 @@ class Client:public Server{
     netSource buf;
     in_addr   from;
     short     port;
+    liveBegin();
     while(liveclientrunning){
       if(!wait_for_data(1,0))continue;
       bzero(&buf,sizeof(buf));
@@ -234,6 +268,7 @@ class Client:public Server{
         }
       }
     }
+    liveEnd();
   }
   bool updatekey(){
     netSource qypk;
