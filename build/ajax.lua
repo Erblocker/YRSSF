@@ -4,46 +4,37 @@ dofile("./lib/urlencode.lua")
 local controlConfig
 local userdata
 function getuserdata()
-  if GET["uid"]==nil then
+  if GET["uname"]==nil then
     return false
   end
   if GET["upw"]==nil then
     return false
   end
-  local uid=math.tointeger(GET["uid"])
-  if uid==nil then
+  local uname=math.tointeger(GET["uname"])
+  if uname==nil then
     return false
   end
-  local upw=sqlfilter(GET["upw"])
-  local res,st=runsql("select * from `user` where id="..uid)
-  if st==false then
-    return false
-  end
+  local upw=GET["upw"]
+  local res=cjson.decode(LDATA_read("user_"..get["uname"]))
   if res==nil then
     return false
   end
-  if res[1]==nil then
+  if not res["pwd"]==GET["upw"] then
     return false
   end
-  userdata=res[1]
+  userdata=res
   return true
 end
 function getcontrol()
-  local mode=sqlfilter(GET["mode"])
+  local mode=GET["mode"]
   if not mode then
     return false
   end
-  local res,st=runsql("select * from `control` where name='"..mode.."'")
-  if st==false then
-    return false
-  end
+  local res=cjson.decode(LDATA_read("config_control_"..mode))
   if res==nil then
     return false
   end
-  if res[1]==nil then
-    return false
-  end
-  controlConfig=res[1]
+  controlConfig=res
   return true
 end
 function router()
@@ -58,33 +49,33 @@ function router()
     RESULT="Empty Request"
     return
   end
-  if controlCofig[4]=="1" then
+  if controlCofig["disabled"]=="1" then
     return
   end
-  if controlCofig[6]=="1" then
+  if controlCofig["token"]=="1" then
     local token=math.tointeger(GET["token"])
     if not uniqueExist(0,token) then
       RESULT="Token Error"
       return
     end
   end
-  if controlCofig[7]=="1" then
+  if controlCofig["login"]=="1" then
     if not getuserdata() then
       RESULT="Login"
       return
     end
-    if controlCofig[5]=="1" then
-      if not userdata[3]=="1" then
+    if controlCofig["admin"]=="1" then
+      if not userdata["admin"]=="1" then
         return
       end
     end
   end
-  if controlCofig[3]=="1" then
+  if controlCofig["unique"]=="1" then
     ysThreadLock()
-    dofile(controlCofig[2])
+    dofile(controlCofig["path"])
     ysThreadUnlock()
   else
-    dofile(controlCofig[2])
+    dofile(controlCofig["path"])
   end
 end
 router()

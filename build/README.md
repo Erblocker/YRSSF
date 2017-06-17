@@ -9,9 +9,9 @@
 ### clientRegister
 ### clientGetUniKey
 ### changeParentServer  
-### connectToUser
-### globalModeOn
-### globalModeOff
+### connectToUser  
+### globalModeOn  
+### globalModeOff  
 ## 服务器函数
 ### connectUser
 ### succeed

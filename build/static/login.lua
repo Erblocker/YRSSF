@@ -7,5 +7,19 @@ function setusercookie(uname,pwd)
   Httpd.write(Request.fd,"Set-Cookie:uname="..uname..";path=/;")
   Httpd.write(Request.fd,"Set-Cookie:pwd="..pwd..";path=/;")
 end
-local keyname="user_"..get[uid]
-local value=LDATA_read(keyname)
+function getuserinfo(get)
+  local keyname="user_"..get["uname"]
+  local value=LDATA_read(keyname)
+  if not value=="" then
+    return cjson.decode(value)
+  end
+end
+function login(get)
+  local user=getuserinfo(get)
+  if user["pwd"]==get["pwd"] then
+    setusercookie(get["uname"],user["pwd"])
+  end
+end
+if get["mode"]=="login" then
+  checkpwd(get)
+end

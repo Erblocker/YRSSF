@@ -447,6 +447,20 @@ class API{
       lk.unlock();
       return 1;
     });
+    lua_register(L,"goLastServer",[](lua_State * L){
+      if(clientdisabled)return 0;
+      clientlocker.lock();
+      client.goLast();
+      clientlocker.unlock();
+      return 0;
+    });
+    lua_register(L,"clientLogin",[](lua_State * L){
+      if(clientdisabled)return 0;
+      clientlocker.lock();
+      client.login();
+      clientlocker.unlock();
+      return 0;
+    });
     lua_register(L,"nodeModeOn",[](lua_State * L){
       config::nodemode=1;
       return 0;

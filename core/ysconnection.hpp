@@ -124,8 +124,11 @@ class ysConnection:public serverBase{
   virtual bool goLast(){
     location lc;
     iplocker.lock();
-    if(ipstack.empty())
+    if(ipstack.empty()){
+      iplocker.unlock();
       return 0;
+      
+    }
     lc=ipstack.top();
     ipstack.pop();
     parIP=lc.ip;
