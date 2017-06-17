@@ -12,7 +12,7 @@
 #include "lobject.h"
 #include "ltm.h"
 #include "lzio.h"
-
+#include <pthread.h>
 
 /*
 
@@ -150,6 +150,7 @@ typedef struct global_State {
   TString *tmname[TM_N];  /* array with tag-method names */
   struct Table *mt[LUA_NUMTAGS];  /* metatables for basic types */
   TString *strcache[STRCACHE_N][STRCACHE_M];  /* cache for strings in API */
+  pthread_mutex_t lock;
 } global_State;
 
 
