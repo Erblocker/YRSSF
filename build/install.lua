@@ -1,3 +1,4 @@
+dofile("./lib/control.lua")
 function install()
   local path=APP_PATH.."/install.lock"
   local file=io.open(path,"r")
@@ -8,28 +9,59 @@ function install()
     ----install begin
     print("install")
     --------------------
-    runsql("create table `control` ("
-      .."`name`     varchar(64),"
-      .."`path`     varchar(1024),"
-      .."`unique`   int(1) default 0,"
-      .."`disabled` int(1) default 1,"
-      .."`admin`    int(1) default 0,"
-      .."`token`    int(1) default 1,"
-      .."`login`    int(1) default 1"
-      ..")"
+    controlConfig("live",{
+        ["path"]  ="./control/live.lua",
+        ["token"] =1,
+        ["login"] =1,
+        ["admin"] =1,
+        ["unique"]=1
+      }
+    )
+    controlConfig("connect",{
+        ["path"]  ="./control/connect.lua",
+        ["token"] =1,
+        ["login"] =1,
+        ["admin"] =1,
+        ["unique"]=1
+      }
+    )
+    controlConfig("login",{
+        ["path"]  ="./control/login.lua",
+        ["token"] =1,
+        ["login"] =0,
+        ["admin"] =0,
+        ["unique"]=0
+      }
+    )
+    controlConfig("chat",{
+        ["path"]  ="./control/chat.lua",
+        ["token"] =1,
+        ["login"] =1,
+        ["admin"] =0,
+        ["unique"]=0
+      }
+    )
+    controlConfig("source",{
+        ["path"]  ="./control/source.lua",
+        ["token"] =1,
+        ["login"] =1,
+        ["admin"] =1,
+        ["unique"]=0
+      }
+    )
+    controlConfig("viewsource",{
+        ["path"]  ="./control/live.lua",
+        ["token"] =0,
+        ["login"] =0,
+        ["admin"] =0,
+        ["unique"]=0
+      }
     )
     --------------------
-    runsql("create table `user` ("
-      .."`id`     int key AUTO_INCREMENT,"
-      .."`ysid`   varchar(16),"
-      .."`admin`  int(1) default 0,"
-      .."`shield` int(1) default 0,"
-      .."`level`  int    default 1,"
-      .."`exp`    int    default 0,"
-      .."`uname`  varchar(64),"
-      .."`pwd`    varchar(64),"
-      .."`text`   text"
-      ..")"
+    LDATA_set("user_admin",{
+        ["pwd"]  ="",
+        ["admin"]=1
+      }
     )
     --------------------
     runsql("create table `source` ("

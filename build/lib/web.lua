@@ -23,16 +23,16 @@ function web.common(req)
   
   return o
 end
-function web.echo(o,str)
-  Httpd.write(o.req.fd,str)
+function web:echo(str)
+  Httpd.write(self.req.fd,str)
 end
-function web.ok(o)
-  o:echo(
+function web:ok()
+  self:echo(
   "HTTP/1.0 200 OK\r\n"..
   "Content-Type:text/html;charset=UTF-8\r\n"..
   "Cache-Control:no-cache\r\n"..
   "\r\n")
 end
-function web.template(o,path,assign)
-  Httpd.template(o.req.fd,path,assign)
+function web:template(path,assign)
+  Httpd.template(self.req.fd,path,assign)
 end

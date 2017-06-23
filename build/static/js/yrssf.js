@@ -34,3 +34,6 @@ function getsource(){
     }catch(e){}
   });
 }
+window.onload=fuction(){
+  playthemesong();
+}
