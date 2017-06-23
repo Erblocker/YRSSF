@@ -308,6 +308,7 @@ class ysConnection:public serverBase{
     lua_pushinteger(lua,query->header.userid());
     lua_setglobal(lua,"USERID");
     wristr(query->header.function,buffer);
+    buffer[16]='\0';
     lua_pushstring(lua,buffer);
     lua_setglobal(lua,"FUNCTION_NAME");
     lua_pushstring(lua,u->c_str());
@@ -335,7 +336,7 @@ class ysConnection:public serverBase{
     int i;
     const char * ostr;
     
-    lua_getglobal(lua,"str1");
+    lua_getglobal(lua,"STR1");
     if(lua_isstring(lua,-1)){
       ostr=lua_tostring(lua,-1);
       for(i=0;(i<16 && ostr[i]!='\0');i++)
@@ -343,7 +344,7 @@ class ysConnection:public serverBase{
     }
     lua_pop(lua,1);
     
-    lua_getglobal(lua,"str2");
+    lua_getglobal(lua,"STR2");
     if(lua_isstring(lua,-1)){
       ostr=lua_tostring(lua,-1);
       for(i=0;(i<16 && ostr[i]!='\0');i++)

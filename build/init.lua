@@ -1,3 +1,7 @@
+---- yrssf运行时加载的第二个脚本，同时也是第一个获得ysAPI的脚本
+---- 从这里开始，你可以使用yrssf的全部API了
+---- 同时lua引擎获得了系统变量，SERVER和CLIENT，用于发送yrssf协议的数据包
+---- 这两个变量请不要随意修改，否则会导致溢出！！！
 dofile("./lib/base64.lua")
 dofile("./lib/serialize.lua")
 dofile("./install.lua")

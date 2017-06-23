@@ -98,6 +98,6 @@ void ajax(yrssf::httpd::request * req){
 }
 void webserverRun(){
     yrssf::httpd::addrule(ajax,"/ajax");
-    yrssf::httpd::run(1215);
+    yrssf::httpd::run(yrssf::config::L.httpdPort);
 }
 #endif

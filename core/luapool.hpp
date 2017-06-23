@@ -32,6 +32,9 @@ namespace yrssf{
         next=NULL;
         
       }
+      void clean(){
+        lua_settop(L,0);
+      }
       ~lua_node(){
         lua_close(L);
         //if(next)
@@ -88,6 +91,7 @@ namespace yrssf{
       return p.get();
     }
     void Delete(luap * t){
+      t->clean();
       p.del(t);
     }
   }

@@ -1,0 +1,13 @@
+---- 收到yrssf协议_PLUS请求时触发此程序
+---- 具体实现见core/ysconnection.hpp
+----   函数： bool yrssf::ysConnection::plus(in_addr from,short fport,void * data,std::string * u,netQuery * result)
+---- 本程序用于yrssf协议扩展功能
+---- 系统变量：
+------ (int)   FROM           //来源
+------ (int)   FROM_PORT      //来源端口
+------ (void*) RUNNINGSERVER  //this指针 (和SERVER功能相同)
+------ (int)   USERID         //用户id
+------ (string)FUNCTION_NAME  //方法名
+---- 下面的变量会被发送到客户端
+------ (int)   NUM1,NUM2,NUM3,NUM4
+------ (string)STR1,STR2

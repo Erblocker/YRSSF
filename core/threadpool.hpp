@@ -1,8 +1,5 @@
 #ifndef yrssf_threadpool
 #define yrssf_threadpool
-#ifndef yrssf_threadpool_size
-  #define yrssf_threadpool_size 16
-#endif
 #include "global.hpp"
 #include <pthread.h>
 #include <unistd.h>
@@ -194,7 +191,7 @@ namespace yrssf{
     class Init{
       public:
       Init(){
-        if (tpool_create(yrssf_threadpool_size) != 0) {
+        if (tpool_create(config::L.tpoolsize) != 0) {
           printf("tpool_create failed\n");
           exit(1);
         }

@@ -1,6 +1,7 @@
 #ifndef yrssf_core_client
 #define yrssf_core_client
 #include "server.hpp"
+#include "global.hpp"
 namespace yrssf{
 class Client:public Server{
   public:
@@ -648,6 +649,6 @@ class Client:public Server{
       }
     }
   }
-}client(CLIENT_PORT);
+}client(config::L.yscPort);
 }
 #endif

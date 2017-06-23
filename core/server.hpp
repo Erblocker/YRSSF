@@ -125,6 +125,6 @@ class Server:public ysConnection{
     pool.del(r);
     w.unlock();
   }
-}server(SERVER_PORT);
+}server(config::L.ysPort);
 }
 #endif

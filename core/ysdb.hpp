@@ -27,7 +27,7 @@ class YsDB{
   YsDB(){
     leveldb::Options options;
     options.create_if_missing = true;
-    assert(leveldb::DB::Open(options, "data/unique", &unique).ok());
+    assert(leveldb::DB::Open(options, "data/session", &unique).ok());
     assert(leveldb::DB::Open(options, "data/ldata", &ldata).ok());
   }
   ~YsDB(){

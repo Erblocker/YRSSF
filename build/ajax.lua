@@ -1,3 +1,10 @@
+---- yrssf的重要入口点之一
+---- 在http://0.0.0.0/ajax 被访问时此程序会被调用
+---- 系统变量：
+------ (const table)GET      //get方式接受的数据
+------ (const table)POST     //post方式接受的数据
+------ (const table)COOKIE   //cookies不解释
+------ (string)     RESULT   //将返回結果賦值給此變量
 dofile("./lib/base64.lua")
 dofile("./lib/serialize.lua")
 dofile("./lib/urlencode.lua")
