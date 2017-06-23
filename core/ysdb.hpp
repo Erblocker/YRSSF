@@ -13,61 +13,24 @@
 #include "key.hpp"
 namespace yrssf{
 const char defaultUserInfo[]="1234567890abcdef1234567890abcdef1234567890abcdef";
+std::string userpre="system_user_";
+std::string srcpre="system_src_";
 class YsDB{
   public:
-  leveldb::DB *              user;
-  leveldb::DB *              userTime;
-  leveldb::DB *              userTmp;
   std::map<int32_t,location> userIP;
-  leveldb::DB *              sourceBoardcast;
-  leveldb::DB *              sourceUser;
-  leveldb::DB *              keys;
   leveldb::DB *              ldata;
   std::set<location>         livelist;
   leveldb::DB *              unique;
   RWMutex                    locker;
   RWMutex                    livelocker;
   RWMutex                    livelistlocker;
-/*
-* format:
-**************************************************************
-* name             *   key         *    value                *
-**************************************************************
-* user:            * {username[8]} *  {password[16]}{acl[16]}*
-* userTime:        * {username[8]} *    {time}               *
-* userIP           * {username[8]} *    {ip}                 *
-* userTmp          * {username[8]} *    {pwd}                *
-* sourceBoardcast: * {srcname[8]}  *    {string}             *
-* sourceUser:      * {srcname[8]}  *    {string}             *
-**************************************************************
-*
-*Acl:
-*position                       enum
-*[0]        edit source         t,f
-*[1]        edit all user       t,f
-*[2]        node mode           t,f
-*[3]        shell               t,f
-*[4]        live mode           t,f
-*/
   YsDB(){
     leveldb::Options options;
     options.create_if_missing = true;
-    assert(leveldb::DB::Open(options, "data/user", &user).ok());
-    assert(leveldb::DB::Open(options, "data/userTime", &userTime).ok());
-    assert(leveldb::DB::Open(options, "data/userTmp", &userTmp).ok());
-    assert(leveldb::DB::Open(options, "data/sourceUser", &sourceUser).ok());
-    assert(leveldb::DB::Open(options, "data/sourceBoardcast", &sourceBoardcast).ok());
-    assert(leveldb::DB::Open(options, "data/keys", &keys).ok());
     assert(leveldb::DB::Open(options, "data/unique", &unique).ok());
     assert(leveldb::DB::Open(options, "data/ldata", &ldata).ok());
   }
   ~YsDB(){
-    delete user;
-    delete userTime;
-    delete userTmp;
-    delete sourceBoardcast;
-    delete sourceUser;
-    delete keys;
     delete unique;
     delete ldata;
   }
@@ -101,7 +64,7 @@ class YsDB{
     char name[9];
     std::string v;
     int2str(&uid,name);
-    if(!keys->Get(leveldb::ReadOptions(),name,&v).ok())return 0;
+    if(!ldata->Get(leveldb::ReadOptions(),userpre+std::string(name)+"_key",&v).ok())return 0;
     if(v.length()<16)return 0;
     key->getbase64(v.c_str());
     return 1;
@@ -111,7 +74,7 @@ class YsDB{
     int2str(&uid,name);
     char v[32];
     key->tobase64(v);
-    keys->Put(leveldb::WriteOptions(),name,v);
+    ldata->Put(leveldb::WriteOptions(),userpre+std::string(name)+"_key",v);
   }
   bool logunique(int32_t uid,int32_t lid){
     if(lid==0)return 1;
@@ -138,7 +101,7 @@ class YsDB{
     std::string v;
     char userids[9];
     int2str(&userid,userids);
-    if(user->Get(leveldb::ReadOptions(),userids,&v).ok())
+    if(ldata->Get(leveldb::ReadOptions(),userpre+userids,&v).ok())
       if(!v.empty())return 1;
     return 0;
   }
@@ -146,7 +109,7 @@ class YsDB{
     char name[9];
     const char * tp;
     int2str(&userid,name);
-    if(!userTmp->Get(leveldb::ReadOptions(),name,v).ok()) goto loginTmpFail;
+    if(!ldata->Get(leveldb::ReadOptions(),userpre+std::string(name)+"_tmp",v).ok()) goto loginTmpFail;
     if(v->empty())goto loginTmpFail;
     tp=v->c_str();
     for(int i=0;i<16;i++){
@@ -156,10 +119,10 @@ class YsDB{
       if( tp[i]=='\0') goto loginTmpFail;
       if(pwd[i]!=tp[i])goto loginTmpFail;
     }
-    if(!user->Get(leveldb::ReadOptions(),name,v).ok()) return 0;
+    if(!ldata->Get(leveldb::ReadOptions(),userpre+name,v).ok()) return 0;
     goto loginsucceed;
     loginTmpFail:
-    if(!user->Get(leveldb::ReadOptions(),name,v).ok()) return 0;
+    if(!ldata->Get(leveldb::ReadOptions(),userpre+name,v).ok()) return 0;
     if(v->empty())return 0;
     tp=v->c_str();
     for(int i=0;i<16;i++){
@@ -170,7 +133,7 @@ class YsDB{
       if(pwd[i]!=tp[i])return 0;
     }
     loginsucceed:
-    userTime->Put(leveldb::WriteOptions(),name,nowtime());
+    ldata->Put(leveldb::WriteOptions(),userpre+std::string(name)+"_time",nowtime());
     return 1;
   }
   bool setTmpPwd(int32_t userid,char * pwd){
@@ -183,7 +146,7 @@ class YsDB{
       v[i]=pwd[i];
     }
     v[16]='\0';
-    userTmp->Put(leveldb::WriteOptions(),name,v);
+    ldata->Put(leveldb::WriteOptions(),userpre+std::string(name)+"_tmp",v);
     return 1;
   }
   template<typename T1,typename T2>
@@ -205,10 +168,10 @@ class YsDB{
     std::string v;
     char name[9];
     int2str(&userid,name);
-    if(!user->Get(leveldb::ReadOptions(),name,&v).ok())return 0;
+    if(!ldata->Get(leveldb::ReadOptions(),userpre+name,&v).ok())return 0;
     if(v.length()<sizeof(defaultUserInfo)) return 0;
     for(i=0;i<16;i++)v[i]=pwd[i];
-    user->Put(leveldb::WriteOptions(),name,v);
+    ldata->Put(leveldb::WriteOptions(),userpre+name,v);
     return 1;
   }
   bool changeAcl(int32_t userid,const char * acl){
@@ -217,21 +180,21 @@ class YsDB{
     std::string v;
     char name[9];
     int2str(&userid,name);
-    if(!user->Get(leveldb::ReadOptions(),name,&v).ok())return 0;
+    if(!ldata->Get(leveldb::ReadOptions(),userpre+name,&v).ok())return 0;
     if(v.length()<sizeof(defaultUserInfo)) return 0;
     for(i=0;i<16;i++)v[i+16]=acl[i];
-    user->Put(leveldb::WriteOptions(),name,v);
+    ldata->Put(leveldb::WriteOptions(),userpre+name,v);
     return 1;
   }
   bool newUser(int32_t userid){
     char name[9];
     int2str(&userid,name);
-    user->Put(leveldb::WriteOptions(),name,defaultUserInfo);
+    ldata->Put(leveldb::WriteOptions(),userpre+name,defaultUserInfo);
   }
   bool delUser(int32_t userid){
     char name[9];
     int2str(&userid,name);
-    user->Delete(leveldb::WriteOptions(),name);
+    ldata->Delete(leveldb::WriteOptions(),userpre+name);
   }
   bool getSrcName(char * out,const char * name){
     char str[9];
@@ -257,44 +220,44 @@ class YsDB{
   bool writeSrc(const char * sname,const char * src){
     char name[9];
     if(!getSrcName(name,sname))return 0;
-    return sourceBoardcast->Put(leveldb::WriteOptions(),name,src).ok();
+    return ldata->Put(leveldb::WriteOptions(),srcpre+name,src).ok();
   }
   bool writeSrc(const char * sname,int32_t userid,const char * src){
     char name1[9];
     std::string v;
     if(!getSrcName(name1,sname))return 0;
-    if(!sourceBoardcast->Get(leveldb::ReadOptions(),name1,&v).ok())return 0;
+    if(!ldata->Get(leveldb::ReadOptions(),srcpre+name1,&v).ok())return 0;
     char name[17];
     if(!getSrcName(name,sname,userid))return 0;
-    return sourceUser->Put(leveldb::WriteOptions(),name,src).ok();
+    return ldata->Put(leveldb::WriteOptions(),srcpre+name,src).ok();
   }
   bool readSrc(const char * sname,std::string * src){
     char name[9];
     if(!getSrcName(name,sname))return 0;
-    return sourceBoardcast->Get(leveldb::ReadOptions(),name,src).ok();
+    return ldata->Get(leveldb::ReadOptions(),srcpre+name,src).ok();
   }
   bool readSrc(const char * sname,int32_t userid,std::string * src){
     char name1[9];
     std::string v;
     if(!getSrcName(name1,sname))return 0;
-    if(!sourceBoardcast->Get(leveldb::ReadOptions(),name1,&v).ok())return 0;
+    if(!ldata->Get(leveldb::ReadOptions(),srcpre+name1,&v).ok())return 0;
     char name[17];
     if(!getSrcName(name,sname,userid))return 0;
-    return sourceUser->Get(leveldb::ReadOptions(),name,src).ok();
+    return ldata->Get(leveldb::ReadOptions(),srcpre+name,src).ok();
   }
   bool delSrc(const char * sname){
     char name[9];
     if(!getSrcName(name,sname))return 0;
-    return sourceBoardcast->Delete(leveldb::WriteOptions(),name).ok();
+    return ldata->Delete(leveldb::WriteOptions(),srcpre+name).ok();
   }
   bool delSrc(const char * sname,int32_t userid){
     char name1[9];
     std::string v;
     if(!getSrcName(name1,sname))return 0;
-    if(!sourceBoardcast->Get(leveldb::ReadOptions(),name1,&v).ok())return 0;
+    if(!ldata->Get(leveldb::ReadOptions(),srcpre+name1,&v).ok())return 0;
     char name[17];
     if(!getSrcName(name,sname,userid))return 0;
-    return sourceUser->Delete(leveldb::WriteOptions(),name).ok();
+    return ldata->Delete(leveldb::WriteOptions(),srcpre+name).ok();
   }
   bool existSrc(const char * sname){
     std::string str;

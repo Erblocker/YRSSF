@@ -564,6 +564,19 @@ char * url_encode(char const *s, int len, int *new_length){
     return (char *) start;
 }
 
+//匹配前缀
+//s1:前缀
+//s2:字符串
+bool prefix_match(const char * s1,const char * s2){
+      const char * sp=s1;
+      const char * p2=s2;
+      while(*sp){
+       if((*sp)!=(*p2))return 0;
+       sp++;
+       p2++;
+      }
+      return 1;
+}
 
 int url_decode(char *str, int len){
     char *dest = str;

@@ -4,19 +4,41 @@ dofile("./lib/urlencode.lua")
 controlConfig={}
 userdata={}
 function getuserdata()
-  if GET["uname"]==nil then
-    return false
+  
+  local uname
+  local upw
+  
+  if not GET["uname"]==nil then
+    uname=GET["uname"]
+  else
+    if not COOKIE["uname"]==nil then
+      uname=COOKIE["uname"]
+    else
+      return false
+    end
   end
-  if GET["upw"]==nil then
-    return false
+  
+  if not GET["upw"]==nil then
+    uname=GET["upw"]
+  else
+    if not COOKIE["pwd"]==nil then
+      uname=COOKIE["pwd"]
+    else
+      return false
+    end
   end
-  local uname=GET["uname"]
+  
   if uname==nil then
     return false
   end
-  local upw=GET["upw"]
+  
   local res=cjson.decode(LDATA_read("user_"..get["uname"]))
+  
   if res==nil then
+    return false
+  end
+  
+  if res=="" then
     return false
   end
   if not res["pwd"]==GET["upw"] then
@@ -32,6 +54,9 @@ function getcontrol()
   end
   local res=cjson.decode(LDATA_read("config_control_"..mode))
   if res==nil then
+    return false
+  end
+  if res=="" then
     return false
   end
   controlConfig=res

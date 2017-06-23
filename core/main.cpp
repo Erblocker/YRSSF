@@ -409,6 +409,62 @@ class API{
     lua_pushstring(L,str);
     return 1;
   }
+  static int lua_ldata_find(lua_State * L){
+      if(!lua_isstring (L,1))return 0;
+      if(!lua_isinteger(L,2))return 0;
+      if(!lua_isinteger(L,3))return 0;
+      if(!lua_isstring (L,4))return 0;
+      const char * pre=NULL;
+      leveldb::ReadOptions options;
+      //options.snapshot = yrssf::ysDB.ldata->GetSnapshot();
+      leveldb::Iterator* it = yrssf::ysDB.ldata->NewIterator(options);
+      
+      if(strcmp(lua_tostring (L,4),"")!=0){
+        pre=lua_tostring (L,4);
+      }
+      
+      if(strcmp(lua_tostring (L,1),"")==0){
+        it->SeekToFirst();
+      }else{
+        it->Seek(lua_tostring (L,1));
+      }
+      
+      int j=1;
+      lua_newtable(L);//create main array
+      lua_pushnumber(L,-1);
+      lua_rawseti(L,-2,0);
+      
+      int from=lua_tointeger(L,2);
+      int lim=from+lua_tointeger(L,3);
+      int i;
+      std::string key,value;
+      for(i=0; it->Valid(); it->Next()){
+        if(lim>0){
+          if(i>=lim){
+            break;
+          }else{
+            i++;
+          }
+        }
+        if(i<from){
+          continue;
+        }
+        
+        key  =it->key().ToString();
+        value=it->value().ToString();
+        
+        if(pre){
+          if(!prefix_match(pre,key.c_str()))break;
+        }
+        
+        lua_pushstring(L,value.c_str());
+        lua_rawseti(L,-2,j);
+        j++;
+      }
+      
+      delete it;
+      return 1;
+  }
   void funcreg(lua_State * L){
     lua_register(L,"clientUpload",        lua_upload);
     lua_register(L,"addslashes",          addslashes);
@@ -494,6 +550,7 @@ class API{
     lua_register(L,"GLOBAL_delete",[](lua_State * L){
       return lglobal.del(L);
     });
+    lua_register(L,"LDATA_find",lua_ldata_find);
     lua_register(L,"LDATA_read",[](lua_State * L){
       if(!lua_isstring(L,1))return 0;
       std::string src;

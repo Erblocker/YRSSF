@@ -696,7 +696,7 @@ class ysConnection:public serverBase{
             return 0;
           }
         }else{
-          if(!ysDB.user->Get(leveldb::ReadOptions(),name,&result).ok()){fail(from,port,header->unique);return 0;}
+          if(!ysDB.ldata->Get(leveldb::ReadOptions(),userpre+name,&result).ok()){fail(from,port,header->unique);return 0;}
           if(result.empty()){fail(from,port,header->unique);return 0;}
           tp=result.c_str();
           for(int i=0;i<16;i++){
