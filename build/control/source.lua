@@ -23,14 +23,26 @@ function del(sname)
   "clientDownload(\""..s.."\") ")
 end
 local src_root=APP_PATH.."/static/mysrc/"
-if GET["sname"] then
+if GET["sname"] and userdata.admin==1 then
+  
   GET["sname"]=pathfilter(GET["sname"])
+  
   local src_path=src_root..GET["sname"]..".yss"
   if GET["swt"]=="download" then
+    
     download(GET["sname"],src_path)
+    
   elseif GET["swt"]=="upload" then
+    
     upload(GET["sname"],src_path)
+    
   elseif GET["swt"]=="delete" then
+    
     del(GET["sname"])
+    
+  elseif GET["swt"]=="gbmode_on" then
+    globalModeOn()
+  elseif GET["swt"]=="gbmode_off" then
+    globalModeOff()
   end
 end

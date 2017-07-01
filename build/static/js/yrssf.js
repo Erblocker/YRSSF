@@ -3,6 +3,7 @@ window.onload=function(){
     playthemesong();
   }catch(e){}
   getpassage();
+  updateuseri();
 }
 function openbox(arg){
   $(arg).fadeIn("10000");
@@ -33,9 +34,8 @@ function getsource(){
   $.get("ajax?gettoken=1",function(data){
     try{
       var token=data.split(":")[1];
-      $.post("ajax?mode=source&activity="+source.activity+"&token="+token ,{
-        "user"  :source.user,
-        "sname" :source.sname
+      $.post("ajax?mode=source&swt="+source.activity+"&token="+token+"&sname="+source.sname ,{
+        "user"  :source.user
       },
       function(d){
         messagebox(d);
@@ -144,18 +144,47 @@ function usercenter(){
   openbox("#user_center");
 }
 var userinfo;
+function updateuseri(){
+  $.get("ajax?getuserinfo=1",function(data_dd){
+    try{
+      var data=eval("("+data_dd+")");
+      if(data==null)return;
+      if(data.uname==null)return;
+      userinfo=data;
+      openbox("#usc_info");
+      closebox("#usc_login");
+      $("#usc_info").html(userinfo.name);
+      if(userinfo.admin==1){
+        $("#usc_info").append("<br><span style='color:#f00;'>管理员</span>");
+        $("#usc_info").append("<br><a href='javascript:updatesrclist()'>更新资源</a>");
+        $("#usc_info").append("<br><a href='javascript:showsrclist()'>资源列表</a>");
+      }
+    }catch(e){}
+  });
+}
 function login(){
   var uname=document.getElementById("usc_login_uname").value;
   var pwd=document.getElementById("usc_login_pwd").value;
+  document.cookie="uname="+escape(uname) +";";
+  document.cookie="pwd="+  escape(pwd)   +";";
   closebox("#user_center");
-  $.get("login.lua?mode=login&uname="+uname+"&pwd="+pwd,function(data){
+  updateuseri();
+}
+function updatesrclist(){
+  source.activity="download";
+  source.sname="sourceli";
+  $.get("ajax?gettoken=1",function(data){
     try{
-      userinfo=eval("("+data+")");
-      if(userinfo==null)return;
-      if(userinfo.uname==null)return;
-      closebox("#usc_login");
-      openbox("#usc_info");
-      $("#usc_info").html(userinfo.uname);
+      var token=data.split(":")[1];
+      $.get("ajax?mode=&swt=gbmode_on&sname=0&token="+token,function(){
+        getsource();
+      });
     }catch(e){}
+  });
+}
+function showsrclist(){
+  $.get("mysrc/sourceli.yss",function(data){
+    $("#srcbox").html(data);
+    openbox("#source");
   });
 }

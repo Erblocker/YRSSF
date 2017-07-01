@@ -133,16 +133,20 @@ class API{
     char *ostr;
     const char * res;
     if(!lua_isstring(L,1)) return 0;
+    //ysDebug("p1");
     res=lua_tostring(L,1);
-    ostr=(char*)malloc(strlen(res)+1);
+    int len=strlen(res);
+    ostr=(char*)malloc(len+2);
     int i=0;
-    while(*res){
-      ostr[i]=*res;
-      if(ostr[i]=='/') ostr[i]='.';
-      i++;
+    //ysDebug("p2");
+    for(i=0;i<len;i++){
+      ostr[i]=res[i];
+      if(ostr[i]=='/')ostr[i]='_';
     }
+    //ysDebug("p3");
     ostr[i]='\0';
     lua_pushstring(L,ostr);
+    //ysDebug("p4");
     free(ostr);
     return 1;
   }

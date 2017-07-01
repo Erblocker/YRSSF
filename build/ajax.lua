@@ -52,6 +52,9 @@ function getuserdata()
     return false
   end
   userdata=res
+  
+  userdata["uname"]=uname
+  
   return true
 end
 function getcontrol()
@@ -70,6 +73,20 @@ function getcontrol()
   return true
 end
 function router()
+  if GET["getuserinfo"]=="1" then
+    
+    ---- print(cjson.encode(COOKIE))
+    ---- print(cjson.encode(HEADER))
+    
+    if (not getuserdata()) then
+      RESULT="NULL"
+      return
+    end
+    if type(userdata)=="table" then
+      RESULT=cjson.encode(userdata)
+    end
+    return
+  end
   if GET["gettoken"]=="1" then
     local rdn=(math.random()*1000000000)
     rdn=math.floor(rdn)
@@ -81,28 +98,28 @@ function router()
     RESULT="Empty Request"
     return
   end
-  if controlConfig["disabled"]=="1" then
+  if controlConfig["disabled"]==1 then
     return
   end
-  if controlConfig["token"]=="1" then
+  if controlConfig["token"]==1 then
     local token=math.tointeger(GET["token"])
     if (not uniqueExist(0,token)) then
       RESULT="Token Error"
       return
     end
   end
-  if controlConfig["login"]=="1" then
-    if (not getuserdata()) then
+  if controlConfig["login"]==1 then
+    if (not getuserdata()) or userdata["uname"]==nil then
       RESULT="Login"
       return
     end
-    if controlConfig["admin"]=="1" then
-      if userdata["admin"]~="1" then
+    if controlConfig["admin"]==1 then
+      if userdata["admin"]~=1 then
         return
       end
     end
   end
-  if controlConfig["unique"]=="1" then
+  if controlConfig["unique"]==1 then
     ysThreadLock()
     dofile(controlConfig["path"])
     ysThreadUnlock()

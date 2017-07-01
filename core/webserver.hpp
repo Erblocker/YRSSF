@@ -14,6 +14,7 @@ void ajax(yrssf::httpd::request * req){
     //ysDebug("debug");
     req->query_decode();
     //ysDebug("debug");
+    req->getcookie();
     req->cookie_decode();
     //yrssf::httpd::readBufferBeforeSend(req->fd);
     

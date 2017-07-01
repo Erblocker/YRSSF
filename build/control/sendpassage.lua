@@ -4,7 +4,10 @@ function setkw(kw)
   end
 end
 function createdata(arr)
-  LDATA_set("passage_"..GET["pname"],cjson.encode(arr))
+  local ori=LDATA_get("passage_"..GET["pname"])
+  if ori=="" or ori==nil then
+    LDATA_set("passage_"..GET["pname"],cjson.encode(arr))
+  end
 end
 function deletedata(name)
   LDATA_delete("passage_"..name)
@@ -30,8 +33,8 @@ function sres()
     return
   end
 end
-if userdata["post"]=="1" then
-  sres()
-else
-  RESULT="Permission denied"
-end
+  if userdata.post==1 then
+    sres()
+  else
+    RESULT="Permission denied"
+  end

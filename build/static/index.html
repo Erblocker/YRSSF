@@ -69,6 +69,15 @@
         position:absolute;
         background:rgba(0,255,255,0.5);
       }
+      #source {
+        z-index:800;
+        text-align:center;
+        display:none;
+        height:100%;
+        width:100%;
+        position:absolute;
+        background:rgba(0,255,255,0.5);
+      }
       #mbox {
         z-index:1;
         text-align:center;
@@ -90,6 +99,13 @@
         height:80%;
         width:100%;
         text-align:center;
+      }
+      #srcbox {
+        overflow-x:scroll;
+        overflow-y:scroll;
+        height:80%;
+        width:100%;
+        text-align:left;
       }
       #user_center{
         z-index:998;
@@ -185,6 +201,14 @@
         <img src="img/close.svg"/>
       </a>
       <div>
+        
+      </div>
+    </div>
+    <div id="source">
+      <a style="float:right;" href="javascript:closebox('#source')">
+        <img src="img/close.svg"/>
+      </a>
+      <div id="srcbox" style="top:10%;width:100%;position:absolute;background:rgba(0,255,255,0.7);">
         
       </div>
     </div>
