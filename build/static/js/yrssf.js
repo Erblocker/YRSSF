@@ -44,7 +44,13 @@ function getsource(){
   });
 }
 function ubbpaser(data){
-  return data;
+  var str=data;
+  str=str.replace("<","&lt;");
+  str=str.replace(">","&gt;");
+  str=str.replace("'","&#39;");
+  str=str.replace('"',"&#34;");
+  str=str.replace(/(http:\/\/|https:\/\/)((\w|=|\?|\.|\/|&|-)+)/g , "<a href='$1$2'>$1$2</a>");
+  return str;
 }
 var page;
 var passages;
@@ -187,4 +193,35 @@ function showsrclist(){
     $("#srcbox").html(data);
     openbox("#source");
   });
+}
+var gettingsrc;
+function getsrc(srcname){
+  gettingsrc=srcname;
+  $.ajax({
+    'url':    'mysrc/'+gettingsrc+'.yss',
+    'type':   'GET',
+    'success':function(data){
+      messagebox(data);
+    },
+    'error':  function(){
+      $.ajax({
+        'url':    'srcs/'+gettingsrc+'.yss',
+        'type':   'GET',
+        'success':function(data){
+          messagebox(data);
+        },
+        'error':  function(){
+          source.activity="download";
+          source.sname=gettingsrc;
+          getsource();
+          alert("正在下载资源，请稍后……");
+        }
+      });
+    }
+  });
+}
+function delsrc(srcname){
+  source.activity="delete";
+  source.sname=srcname;
+  getsource();
 }

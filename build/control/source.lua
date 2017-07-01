@@ -20,7 +20,7 @@ end
 function del(sname)
   local s=addslashes(sname)
   insertIntoQueue("updatekey() \n"..
-  "clientDownload(\""..s.."\") ")
+  "clientDel(\""..s.."\") ")
 end
 local src_root=APP_PATH.."/static/mysrc/"
 if GET["sname"] and userdata.admin==1 then
@@ -39,6 +39,7 @@ if GET["sname"] and userdata.admin==1 then
   elseif GET["swt"]=="delete" then
     
     del(GET["sname"])
+    os.remove(src_path)
     
   elseif GET["swt"]=="gbmode_on" then
     globalModeOn()
