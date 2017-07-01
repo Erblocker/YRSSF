@@ -84,6 +84,22 @@
         width:100%;
         text-align:left;
       }
+      #usc_m {
+        overflow-x:scroll;
+        overflow-y:scroll;
+        height:80%;
+        width:100%;
+        text-align:center;
+      }
+      #user_center{
+        z-index:998;
+        text-align:center;
+        display:none;
+        height:100%;
+        width:100%;
+        position:absolute;
+        background:rgba(0,255,255,0.5);
+      }
       #maindiv {
         z-index:1;
         text-align: left;
@@ -116,7 +132,7 @@
         color:#ff6611;
       }
       a {
-        color: #0fff0f;
+        color: #0f7a8f;
         text-decoration:none; 
       }
       a:hover {
@@ -125,6 +141,9 @@
       div{
         background:rgba(0,255,255,0.5);
       }
+      li{
+        list-style-type:none;
+      }
     </style>
   </head>
   <body>
@@ -132,7 +151,7 @@
       <div id="topline">
         <span><a href="javascript:openbox('#setting')">关于</a></span>
         <span><a href="javascript:chat('main')">讨论</a></span>
-        <span><a href="javascript:openbox('#mine')">我的</a></span>
+        <span><a href="javascript:openbox('#mine')">更多…</a></span>
       </div>
       <br/>
       <div id="maindiv">
@@ -144,6 +163,21 @@
         <img src="img/close.svg"/>
       </a>
       <div id="v_box_m" style="top:10%;">
+      </div>
+    </div>
+    <div id="user_center">
+      <a style="float:right;" href="javascript:closebox('#user_center')">
+        <img src="img/close.svg"/>
+      </a>
+      <div id="usc_m" style="top:10%;">
+        <div id="usc_login">
+          用户<input type="text" id="usc_login_uname"><br>
+          密码<input type="password" id="usc_login_pwd"><br>
+          <a href="javascript:login()">登录</a>
+        </div>
+        <div id="usc_info" style="display:none;">
+          
+        </div>
       </div>
     </div>
     <div id="setting">
@@ -175,7 +209,10 @@
         <img src="img/close.svg"/>
       </a>
       <br>
-      <a href="javascript:writepassage()">添加文章（只有管理员才有权限）</a>
+      <ul>
+        <li><a href="javascript:usercenter()">用户中心</a></li>
+        <li><a href="javascript:writepassage()">添加文章</a></li>
+      </ul>
     </div>
     <video id="themesong" src="ystheme.ogg"  width="0" height="0" loop="loop" controls>
     </video>

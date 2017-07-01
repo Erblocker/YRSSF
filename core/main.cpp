@@ -438,6 +438,7 @@ class API{
       int lim=from+lua_tointeger(L,3);
       int i;
       std::string key,value;
+      bool rded=0;
       for(i=0; it->Valid(); it->Next()){
         if(lim>0){
           if(i>=lim){
@@ -454,9 +455,16 @@ class API{
         value=it->value().ToString();
         
         if(pre){
-          if(!prefix_match(pre,key.c_str()))break;
+          if(!prefix_match(pre,key.c_str())){
+            if(rded){
+              break;
+            }else{
+              continue;
+            }
+          }
         }
         
+        rded=1;
         lua_pushstring(L,value.c_str());
         lua_rawseti(L,-2,j);
         j++;

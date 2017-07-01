@@ -1,3 +1,9 @@
+window.onload=function(){
+  try{
+    playthemesong();
+  }catch(e){}
+  getpassage();
+}
 function openbox(arg){
   $(arg).fadeIn("10000");
 }
@@ -134,9 +140,22 @@ function getpassage(begin){
     }catch(e){}
   });
 }
-window.onload=function(){
-  try{
-    playthemesong();
-  }catch(e){}
-  getpassage();
+function usercenter(){
+  openbox("#user_center");
+}
+var userinfo;
+function login(){
+  var uname=document.getElementById("usc_login_uname").value;
+  var pwd=document.getElementById("usc_login_pwd").value;
+  closebox("#user_center");
+  $.get("login.lua?mode=login&uname="+uname+"&pwd="+pwd,function(data){
+    try{
+      userinfo=eval("("+data+")");
+      if(userinfo==null)return;
+      if(userinfo.uname==null)return;
+      closebox("#usc_login");
+      openbox("#usc_info");
+      $("#usc_info").html(userinfo.uname);
+    }catch(e){}
+  });
 }
