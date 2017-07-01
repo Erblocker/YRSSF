@@ -72,6 +72,7 @@ function install()
         ["post"] =1
       }
     )
+    LDATA_set("passage","NULL")
     --------------------
     runsql("create table `message`("
       .."`id`      int key AUTO_INCREMENT,"

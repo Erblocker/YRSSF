@@ -7,6 +7,10 @@ dofile("./lib/serialize.lua")
 dofile("./install.lua")
 print("initing")
 print("path:"..APP_PATH)
+function loaddict()
+---- 语言解析器为cppjieba的lua封装版
+  langsolver.init()
+end
 function loadcert()
   local path="./data/cert.txt"
   local file=io.open(path,"r")
@@ -49,7 +53,7 @@ end
 loadcert()
 loadAllowCerts()
 insertIntoQueue("dofile(\"plan/login.lua\")")
-
+loaddict()
 dofile("./init/httpd.lua")
 
 print("inited")

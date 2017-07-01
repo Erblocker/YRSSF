@@ -6,6 +6,15 @@
     <script src="js/jquery.js"></script>
     <script src="js/yrssf.js"></script>
     <style type="text/css">
+      .nightmode{
+        filter:custom(
+          url('nightmode.vs.glsl')
+          url('nightmode.fs.glsl'),
+          40 40,
+          amplitude 60,
+          amount 0.0
+        );
+      }
       #v_box {
         z-index:10;
         height:100%;
@@ -74,13 +83,19 @@
         font-size:90%;
         background:rgba(0,64,255,1);
       }
-      #topline li{
+      #topline span{
         float:left;
-        list-style-type:none;
         width:30%;
       }
+      #topline span:hover{
+        background: #0099ee;
+        color:#ff6611;
+      }
+      #topline a:hover{
+        color:#ff6611;
+      }
       a {
-        color: #00ff00;
+        color: #0fff0f;
         text-decoration:none; 
       }
       a:hover {
@@ -94,9 +109,9 @@
   <body>
     <div id="mbox">
       <div id="topline">
-        <li><a href="javascript:openbox('#setting')">设置</a></li>
-        <li><a href="javascript:openbox('#filemanager')">资源</a></li>
-        <li><a href="javascript:openbox('#mine')">我的</a></li>
+        <span><a href="javascript:openbox('#setting')">设置</a></span>
+        <span><a href="javascript:openbox('#filemanager')">资源</a></span>
+        <span><a href="javascript:openbox('#mine')">我的</a></span>
       </div>
       <br/>
       <div id="maindiv">
