@@ -10,7 +10,7 @@ end
 function getuserinfo(get)
   local keyname="user_"..get["uname"]
   local value=LDATA_read(keyname)
-  if not value=="" then
+  if value~="" then
     return cjson.decode(value)
   end
 end

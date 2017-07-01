@@ -72,7 +72,9 @@ function install()
         ["post"] =1
       }
     )
-    LDATA_set("passage","NULL")
+    LDATA_set("passage",'NULL')
+    LDATA_set("passage_passage1",'{"title":"第一篇文章","text":"test1","name":"passage1"}')
+    LDATA_set("passage_passage2",'{"title":"第二篇文章","text":"test2","name":"passage2"}')
     --------------------
     runsql("create table `message`("
       .."`id`      int key AUTO_INCREMENT,"

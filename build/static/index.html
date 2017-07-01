@@ -3,6 +3,11 @@
   <head>
     <title>YRSSF</title>
     <meta charset="utf-8"/>
+    <script>
+      window.onerror=function(a,b,c,d,e,f){
+        alert("error:"+a+b+c+d+e+f);
+      }
+    </script>
     <script src="js/jquery.js"></script>
     <script src="js/yrssf.js"></script>
     <style type="text/css">
@@ -39,17 +44,25 @@
         width:100%;
         position:absolute;
       }
-      #filemanager {
-        z-index:12;
-        text-align: center;
+      #chat {
+        z-index:100;
+        text-align:center;
         display:none;
         height:100%;
         width:100%;
         position:absolute;
+        background:rgba(0,255,255,0.5);
+      }
+      #chattext {
+        overflow-x:scroll;
+        overflow-y:scroll;
+        height:80%;
+        width:100%;
+        text-align:left;
       }
       #message {
         z-index:999;
-        text-align: center;
+        text-align:center;
         display:none;
         height:100%;
         width:100%;
@@ -58,11 +71,18 @@
       }
       #mbox {
         z-index:1;
-        text-align: center;
+        text-align:center;
         height:100%;
         width:100%;
         position:absolute;
         background:rgba(0,255,255,1);
+      }
+      #v_box_m {
+        overflow-x:scroll;
+        overflow-y:scroll;
+        height:80%;
+        width:100%;
+        text-align:left;
       }
       #maindiv {
         z-index:1;
@@ -86,6 +106,7 @@
       #topline span{
         float:left;
         width:30%;
+        height:100%;
       }
       #topline span:hover{
         background: #0099ee;
@@ -109,8 +130,8 @@
   <body>
     <div id="mbox">
       <div id="topline">
-        <span><a href="javascript:openbox('#setting')">设置</a></span>
-        <span><a href="javascript:openbox('#filemanager')">资源</a></span>
+        <span><a href="javascript:openbox('#setting')">关于</a></span>
+        <span><a href="javascript:chat('main')">讨论</a></span>
         <span><a href="javascript:openbox('#mine')">我的</a></span>
       </div>
       <br/>
@@ -119,7 +140,11 @@
       </div>
     </div>
     <div id="v_box">
-      loading...
+      <a style="float:right;" href="javascript:closebox('#v_box')">
+        <img src="img/close.svg"/>
+      </a>
+      <div id="v_box_m" style="top:10%;">
+      </div>
     </div>
     <div id="setting">
       <a style="float:right;" href="javascript:closebox('#setting')">
@@ -133,21 +158,24 @@
       <a style="float:right;" href="javascript:closebox('#message')">
         <img src="img/close.svg"/>
       </a>
-      <div id="msgbox" style="top:10%;position:absolute;background:rgba(0,255,255,0.7);">
+      <div id="msgbox" style="top:10%;width:100%;position:absolute;background:rgba(0,255,255,0.7);">
         
       </div>
     </div>
-    <div id="filemanager" >
-      <a style="float:right;" href="javascript:closebox('#filemanager')">
+    <div id="chat">
+      <a style="float:right;" href="javascript:closebox('#chat')">
         <img src="img/close.svg"/>
       </a>
-      <iframe src="filemanager" height="90%" width="100%"></iframe>
+      <div id="chattext" style="top:10%;background:rgba(0,255,255,0.7);">
+        
+      </div>
     </div>
     <div id="mine" >
       <a style="float:right;" href="javascript:closebox('#mine')">
         <img src="img/close.svg"/>
       </a>
-      
+      <br>
+      <a href="javascript:writepassage()">添加文章（只有管理员才有权限）</a>
     </div>
     <video id="themesong" src="ystheme.ogg"  width="0" height="0" loop="loop" controls>
     </video>

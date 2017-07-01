@@ -36,7 +36,7 @@ namespace yrssf{
       //lang_string=lua_tostring(L,1);
       solver->Tag(lua_tostring(L,1),lang_tagres);
       lua_newtable(L);//create main array
-      lua_pushnumber(L,-1);
+      lua_pushnil(L);
       lua_rawseti(L,-2,0);
       for(it=lang_tagres.begin();it!=lang_tagres.end();it++){
         lp=*it;
@@ -60,7 +60,7 @@ namespace yrssf{
       std::vector<cppjieba::KeywordExtractor::Word>::iterator it;
       solver->extractor.Extract(lua_tostring(L,0),keywordres, topk);
       lua_newtable(L);//create main array
-      lua_pushnumber(L,-1);
+      lua_pushnil(L);
       lua_rawseti(L,-2,0);
       int n=1,j;
       for(it=keywordres.begin();it!=keywordres.end();it++){

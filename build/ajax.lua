@@ -15,20 +15,20 @@ function getuserdata()
   local uname
   local upw
   
-  if not GET["uname"]==nil then
+  if GET["uname"]~=nil then
     uname=GET["uname"]
   else
-    if not COOKIE["uname"]==nil then
+    if COOKIE["uname"]~=nil then
       uname=COOKIE["uname"]
     else
       return false
     end
   end
   
-  if not GET["upw"]==nil then
+  if GET["upw"]~=nil then
     uname=GET["upw"]
   else
-    if not COOKIE["pwd"]==nil then
+    if COOKIE["pwd"]~=nil then
       uname=COOKIE["pwd"]
     else
       return false
@@ -48,7 +48,7 @@ function getuserdata()
   if res=="" then
     return false
   end
-  if not res["pwd"]==GET["upw"] then
+  if res["pwd"]~=GET["upw"] then
     return false
   end
   userdata=res
@@ -56,7 +56,7 @@ function getuserdata()
 end
 function getcontrol()
   local mode=GET["mode"]
-  if not mode then
+  if (not mode) then
     return false
   end
   local res=cjson.decode(LDATA_read("config_control_"..mode))
@@ -77,7 +77,7 @@ function router()
     RESULT="Token:"..rdn
     return
   end
-  if not getcontrol() then
+  if (not getcontrol()) then
     RESULT="Empty Request"
     return
   end
@@ -86,18 +86,18 @@ function router()
   end
   if controlConfig["token"]=="1" then
     local token=math.tointeger(GET["token"])
-    if not uniqueExist(0,token) then
+    if (not uniqueExist(0,token)) then
       RESULT="Token Error"
       return
     end
   end
   if controlConfig["login"]=="1" then
-    if not getuserdata() then
+    if (not getuserdata()) then
       RESULT="Login"
       return
     end
     if controlConfig["admin"]=="1" then
-      if not userdata["admin"]=="1" then
+      if userdata["admin"]~="1" then
         return
       end
     end

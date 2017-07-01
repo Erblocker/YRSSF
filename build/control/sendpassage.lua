@@ -3,23 +3,20 @@ function setkw(kw)
     return
   end
 end
-fuction createdata(name,arr)
-  LDATA_set("passage_"..name,cjson.encode(arr))
+function createdata(arr)
+  LDATA_set("passage_"..GET["pname"],cjson.encode(arr))
 end
-fuction deletedata(name)
+function deletedata(name)
   LDATA_delete("passage_"..name)
 end
 function sres()
-  if not userdata["post"]==1 then
-    RESULT="Permission denied"
-    return
-  end
   if GET["activity"]=="create" then
     local keyword=langsolver.keyword(POST["text"])
     setkw(keyword)
-    createdata(GET["pname"],{
+    createdata({
         ["text"]   =POST["text"],
         ["title"]  =POST["title"],
+        ["name"]   =GET["pname"],
         ["keyword"]=keyword,
         ["time"]   =nil
       }
@@ -33,4 +30,8 @@ function sres()
     return
   end
 end
-sres()
+if userdata["post"]=="1" then
+  sres()
+else
+  RESULT="Permission denied"
+end

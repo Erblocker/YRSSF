@@ -13,7 +13,7 @@ function connresolver()
     return
   end
   if GET["activity"]=="conn" then
-    if not GET["uid"]==nil then
+    if GET["uid"]~=nil then
       
       ----建立p2p连接
       RESULT=cjson.encode(connectToUser(math.tointeger(GET["uid"])))

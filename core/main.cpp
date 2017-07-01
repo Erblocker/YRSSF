@@ -431,7 +431,7 @@ class API{
       
       int j=1;
       lua_newtable(L);//create main array
-      lua_pushnumber(L,-1);
+      lua_pushnil(L);
       lua_rawseti(L,-2,0);
       
       int from=lua_tointeger(L,2);
