@@ -41,6 +41,10 @@ if GET["sname"] and userdata.admin==1 then
     del(GET["sname"])
     os.remove(src_path)
     
+  elseif GET["swt"]=="deletelocal" then
+    
+    os.remove(src_path)
+  
   elseif GET["swt"]=="gbmode_on" then
     globalModeOn()
   elseif GET["swt"]=="gbmode_off" then

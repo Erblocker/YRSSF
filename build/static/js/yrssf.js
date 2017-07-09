@@ -52,17 +52,18 @@ function ubbpaser(data){
   str=str.replace(/(http:\/\/|https:\/\/)((\w|=|\?|\.|\/|&|-)+)/g , "<a href='$1$2'>$1$2</a>");
   return str;
 }
-var page;
+var page=[];
 var passages;
 function lastpage(){
-  try{
-    if(page==null)return;
-    if(page.length==0)return;
-    getpassage(page.pop());
-  }catch(e){}
+    if(page==null || page.length==0 || page[0]==null){
+      getpassage();
+    }else{
+      var beg=page.pop();
+      alert(beg);
+      getpassage(beg);
+    }
 }
 function nextpage(){
-  try{
     if(passages==null)return;
     if(passages.length==0)return;
     var endp=passages[passages.length-1];
@@ -71,7 +72,6 @@ function nextpage(){
     if(data.name){
       getpassage(data.name);
     }
-  }catch(e){}
 }
 function readpassage(id){
   try{
@@ -109,16 +109,20 @@ function writepassage(){
 }
 function getpassage(begin){
   var url="ajax?mode=viewpassage";
-  if(begin){
+  if(begin!=null){
     url+="&begin="+begin;
     page.push(begin);
   }
   $.get(url,function(data){
     //alert(data);
     var m=document.getElementById("maindiv");
-    m.innerHTML="";
+    if(page.length!=0){
+      m.innerHTML=("<br><a href='javascript:lastpage();'>上一页</a>");
+    }else{
+      m.innerHTML="";
+    }
     try{
-      var i;
+      var i,j=0,k=0;
       var doc=eval("("+data+")");
       passages=doc;
       for(i in doc){
@@ -129,6 +133,11 @@ function getpassage(begin){
             if(line.title==null){
               continue;
             }
+            j++;
+            if(j==1 && page.length!=0){
+              continue;
+            }
+            k++;
             var lk=document.createElement("a");
             lk.innerText=line.title;
             if(line.text==null){
@@ -143,6 +152,11 @@ function getpassage(begin){
           }
         }
       }
+      if(k==0){
+        page.pop();
+        return;
+      }
+      $("#maindiv").append("<br><a href='javascript:nextpage();'>更多...</a>");
     }catch(e){}
   });
 }
@@ -222,6 +236,11 @@ function getsrc(srcname){
 }
 function delsrc(srcname){
   source.activity="delete";
+  source.sname=srcname;
+  getsource();
+}
+function delLocalsrc(srcname){
+  source.activity="deletelocal";
   source.sname=srcname;
   getsource();
 }
