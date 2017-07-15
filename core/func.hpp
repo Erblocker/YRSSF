@@ -5,6 +5,7 @@
 #include <time.h>
 #include <arpa/inet.h>
 #include "global.hpp"
+#include "cppjieba/limonp/Md5.hpp"
 #include <string.h>
 namespace yrssf{
 ///////////////////////////////////////////
@@ -613,6 +614,15 @@ int luaopen_ysfunc(lua_State * L){
     {"BPHash",lua_BPHash},
     {"FNVHash",lua_FNVHash},
     {"APHash",lua_APHash},
+    {"md5",[](lua_State * L){
+        if(!lua_isstring(L,1))return 0;
+        const char * str=lua_tostring(L,1);
+        std::string res;
+        limonp::md5String(str,res);
+        lua_pushstring(L,res.c_str());
+        return 1;
+      }
+    },
     {"GeohashEncode",lua_geohash_encode},
     {"GeohashDecode",lua_geohash_decode},
     {NULL,NULL}

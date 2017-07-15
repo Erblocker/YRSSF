@@ -337,7 +337,11 @@ class API{
       in_addr addr;
       addr.s_addr=inet_addr(lua_tostring(L,1));
       clientlocker.lock();
-      lua_pushboolean(L,client.changeParentServer(addr,lua_tointeger(L,2)));
+      lua_pushboolean(L,(
+          client.changeParentServer(addr,lua_tointeger(L,2)) &&  
+          server.changeParentServer(addr,lua_tointeger(L,2))
+        )
+      );
       clientlocker.unlock();
       return 1;
   }
@@ -373,7 +377,11 @@ class API{
     short   port;
     if(!lua_isinteger(L,1))return 0;
     clientlocker.lock();
-    lua_pushboolean(L,(client.connectToUser(lua_tointeger(L,1),&addr,&port)));
+    lua_pushboolean(L,(
+        client.connectToUser(lua_tointeger(L,1),&addr,&port) && 
+        server.connectToUser(lua_tointeger(L,1),&addr,&port)
+      )
+    );
     clientlocker.unlock();
     char ipbuf[32];
     inttoip(addr,ipbuf);
@@ -496,6 +504,15 @@ class API{
     lua_register(L,"cache_set",           cache::set);
     lua_register(L,"cache_delete",        cache::del);
     lua_register(L,"worker",              sworker::create);
+    lua_register(L,"serverUpdateKey",[](lua_State * L){
+      for(int i=0;i<16;i++)
+        server.key.data[i]=client.key.data[i];
+      return 0;
+    });
+    lua_register(L,"getParentHash",[](lua_State * L){
+      lua_pushstring(L,client.parhash.c_str());
+      return 1;
+    });
     lua_register(L,"gethostbyname",[](lua_State * L){
       if(!lua_isstring(L,1)) return 0;
       static std::mutex lk;
@@ -750,10 +767,12 @@ class API{
     });
     lua_register(L,"cryptModeOn",[](lua_State * L){
       client.iscrypt=1;
+      server.iscrypt=1;
       return 0;
     });
     lua_register(L,"cryptModeOff",[](lua_State * L){
       client.iscrypt=0;
+      server.iscrypt=0;
       return 0;
     });
     lua_register(L,"liveadd",[](lua_State * L){

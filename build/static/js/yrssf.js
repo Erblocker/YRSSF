@@ -203,7 +203,7 @@ function updatesrclist(){
   });
 }
 function showsrclist(){
-  $.get("mysrc/sourceli.yss",function(data){
+  $.get("mysource/sourceli.yss",function(data){
     $("#srcbox").html(data);
     openbox("#source");
   });

@@ -85,6 +85,7 @@ void ajax(yrssf::httpd::request * req){
     
     yrssf::httpd::writeStr(req->fd,
       "HTTP/1.0 200 OK\r\n"
+      "Server:yrssf-ajax-server\r\n"
       "Content-Type:text/html;charset=UTF-8\r\n"
       "Cache-Control:no-cache\r\n"
       "\r\n"
@@ -97,8 +98,41 @@ void ajax(yrssf::httpd::request * req){
     }
     yrssf::luapool::Delete(Lp);
 }
+void msrc(yrssf::httpd::request * req){
+    req->init();
+    //ysDebug("debug");
+    req->query_decode();
+    //ysDebug("debug");
+    req->getcookie();
+    req->cookie_decode();
+    
+    //yrssf::httpd::readBufferBeforeSend(req->fd);
+    
+    std::string url="../";
+    url+=yrssf::client.parhash;
+    
+    const char * tmp=strrchr(req->url,'/');
+    
+    if(tmp){
+      tmp++;
+      if(*tmp){
+        url+="/";
+        url+=tmp;
+      }
+    }
+    
+    auto loca=std::string("Location:")+url+"\r\n";
+    
+    yrssf::httpd::writeStr(req->fd,
+      "HTTP/1.0 302 Moved Temporarily\r\n"
+      "Server:yrssf-source-server\r\n"
+    );
+    yrssf::httpd::writeStr(req->fd,loca.c_str());
+    yrssf::httpd::writeStr(req->fd,"\r\n\r\n");
+}
 void webserverRun(){
     yrssf::httpd::addrule(ajax,"/ajax");
+    yrssf::httpd::addrule(msrc,"/mysource");
     yrssf::httpd::run(yrssf::config::L.httpdPort);
 }
 #endif

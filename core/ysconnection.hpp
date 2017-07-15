@@ -924,6 +924,45 @@ class ysConnection:public serverBase{
     }
     ysDB.livelocker.unlock();
   }
+  bool connectToUser(int32_t uid,in_addr * oaddr,short * oport){
+    netQuery qypk;
+    netQuery buf;
+    int      i;
+    in_addr  from;
+    short    port;
+    bzero(&qypk,sizeof(qypk));
+    bzero(&buf ,sizeof(buf ));
+    qypk.header.mode=_CONNECTUSER;
+    wristr(mypassword,qypk.header.password);
+    
+    int rdn=randnum();
+    qypk.header.unique=rdn;
+    
+    qypk.header.userid=myuserid;
+    qypk.header.globalMode=globalmode;
+    qypk.num1=uid;
+    if(iscrypt)crypt_encode(&qypk,&key);
+    for(i=0;i<10;i++){
+      send(parIP,parPort,&qypk,sizeof(qypk));
+      dsloop1:
+      if(recv_within_time(&from,&port,&buf,sizeof(buf),1,0)){
+        if(from.s_addr==parIP.s_addr && port==parPort){
+          crypt_decode(&buf,&key);
+          if(buf.header.mode==_P2PCONNECT){
+            *oport =buf.num1();
+            *oaddr =buf.addr;
+            if(p2pconnect(buf.addr,buf.num1()))
+              return 1;
+            else
+              return 0;
+          }else
+            return 0;
+        }
+        else
+          goto dsloop1;
+      }
+    }
+  }
 };
 }
 #endif

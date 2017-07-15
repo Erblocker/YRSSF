@@ -19,6 +19,7 @@ function loadcert()
     local publickey =ZZBase64.decode(file:read("*line"))
     local privatekey=file:read("*line")
     signerInit(publickey,privatekey)
+    print("public key hash:"..Hash.md5(publickey))
     io.close(file)
   else
     file=io.open(path,"w")

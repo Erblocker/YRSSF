@@ -2,11 +2,13 @@
 #define yrssf_core_client
 #include "server.hpp"
 #include "global.hpp"
+#include "func.hpp"
 namespace yrssf{
 class Client:public Server{
   public:
   bool liveclientrunning;
-  char parpbk[ECDH_SIZE];
+  char parpbk[ECDH_SIZE+1];
+  std::string parhash;
   Client(short p):Server(p){
     globalmode='f';
     iscrypt=0;
@@ -101,6 +103,8 @@ class Client:public Server{
               buf.source,
               ECDH_SIZE
             );
+            parpbk[ECDH_SIZE]='\0';
+            limonp::md5String(parpbk,parhash);
             return 1;
           }else{
             return 0;
@@ -304,7 +308,8 @@ class Client:public Server{
           if(!senddata.checksign())return 0;
           senddata.computekey((unsigned char*)&buf.source);
           for(i=0;i<16;i++){
-            this->key.data[i]=senddata.shared[i];
+            this->key.data[i] =senddata.shared[i];
+            //server.key.data[i]=senddata.shared[i];
           }
           return 1;
         }
@@ -313,45 +318,6 @@ class Client:public Server{
       }
     }
     return 0;
-  }
-  bool connectToUser(int32_t uid,in_addr * oaddr,short * oport){
-    netQuery qypk;
-    netQuery buf;
-    int      i;
-    in_addr  from;
-    short    port;
-    bzero(&qypk,sizeof(qypk));
-    bzero(&buf ,sizeof(buf ));
-    qypk.header.mode=_CONNECTUSER;
-    wristr(mypassword,qypk.header.password);
-    
-    int rdn=randnum();
-    qypk.header.unique=rdn;
-    
-    qypk.header.userid=myuserid;
-    qypk.header.globalMode=globalmode;
-    qypk.num1=uid;
-    if(iscrypt)crypt_encode(&qypk,&key);
-    for(i=0;i<10;i++){
-      send(parIP,parPort,&qypk,sizeof(qypk));
-      dsloop1:
-      if(recv_within_time(&from,&port,&buf,sizeof(buf),1,0)){
-        if(from.s_addr==parIP.s_addr && port==parPort){
-          crypt_decode(&buf,&key);
-          if(buf.header.mode==_P2PCONNECT){
-            *oport =buf.num1();
-            *oaddr =buf.addr;
-            if(p2pconnect(buf.addr,buf.num1()))
-              return 1;
-            else
-              return 0;
-          }else
-            return 0;
-        }
-        else
-          goto dsloop1;
-      }
-    }
   }
   bool newSrc(const char * sname){
     netQuery qypk;

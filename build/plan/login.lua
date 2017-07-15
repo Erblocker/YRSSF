@@ -6,9 +6,12 @@ function loaduser()
   local par =file:read("*line")
   local port=file:read("*line")+0
   print("set user:"..uid)
-  setClientUser(uid,pwd)
-  print("set server")
   changeParentServer(par,port)
+  setClientUser(uid,pwd)
+  updatekey()
+  serverUpdateKey()
+  setServerUser(uid,pwd)
+  print("set server")
   io.close(file)
 end
 

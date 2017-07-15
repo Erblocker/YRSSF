@@ -22,7 +22,7 @@ function del(sname)
   insertIntoQueue("updatekey() \n"..
   "clientDel(\""..s.."\") ")
 end
-local src_root=APP_PATH.."/static/mysrc/"
+local src_root=APP_PATH.."/static/mysrc/"..getParentHash().."/"
 if GET["sname"] and userdata.admin==1 then
   
   GET["sname"]=pathfilter(GET["sname"])
