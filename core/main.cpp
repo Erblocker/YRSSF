@@ -50,6 +50,7 @@ extern "C" {
 #include "scriptqueue.hpp"
 #include "scriptworker.hpp"
 #include "cache.hpp"
+#include "sta.hpp"
 #include "languagesolver.hpp"
 extern "C" int luaopen_cjson(lua_State *l);
 namespace yrssf{
@@ -378,7 +379,23 @@ class API{
     if(!lua_isinteger(L,1))return 0;
     clientlocker.lock();
     lua_pushboolean(L,(
-        client.connectToUser(lua_tointeger(L,1),&addr,&port) && 
+        client.connectToUser(lua_tointeger(L,1),&addr,&port)
+      )
+    );
+    clientlocker.unlock();
+    char ipbuf[32];
+    inttoip(addr,ipbuf);
+    lua_pushstring(L,ipbuf);
+    lua_pushinteger(L,port);
+    return 3;
+  }
+  static int lua_becomeNode(lua_State * L){
+    if(clientdisabled)return 0;
+    in_addr addr;
+    short   port;
+    if(!lua_isinteger(L,1))return 0;
+    clientlocker.lock();
+    lua_pushboolean(L,(
         server.connectToUser(lua_tointeger(L,1),&addr,&port)
       )
     );
@@ -497,6 +514,7 @@ class API{
     lua_register(L,"changeParentServer",  lua_cps);
     lua_register(L,"connectUser",         lua_connectUser);
     lua_register(L,"connectToUser",       lua_connectToUser);
+    lua_register(L,"becomeNode",          lua_becomeNode);
     lua_register(L,"getkey",              lua_getkey);
     lua_register(L,"setkey",              lua_setkey);
     lua_register(L,"runsql",              runsql);
@@ -804,6 +822,7 @@ class API{
     luaopen_cjson(L);
     langsolver::luaopen(L);
     httpd::luaopen(L);
+    sta::luaopen(L);
     luaopen_ysfunc(L);
   }
 }api;

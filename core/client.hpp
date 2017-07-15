@@ -7,8 +7,6 @@ namespace yrssf{
 class Client:public Server{
   public:
   bool liveclientrunning;
-  char parpbk[ECDH_SIZE+1];
-  std::string parhash;
   Client(short p):Server(p){
     globalmode='f';
     iscrypt=0;
@@ -74,48 +72,6 @@ class Client:public Server{
     for(int i=0;i<8;i++)
       send(parIP,parPort,&qypk,sizeof(qypk));
   }
-  bool getPbk(){
-    netSource qypk;
-    netSource buf;
-    int i;
-    in_addr  from;
-    short    port;
-    bzero(&qypk,sizeof(qypk));
-    qypk.header.mode=_GET_PUBLIC_KEY;
-    qypk.header.userid=myuserid;
-    int rdn=randnum();
-    qypk.header.unique=rdn;
-    //wristr(mypassword,qypk.header.password);
-    //获取公钥不需要密码
-    if(iscrypt)crypt_encode(&qypk,&key);
-    for(i=0;i<10;i++){
-      send(parIP,parPort,&qypk,sizeof(qypk));
-      dsloop1:
-      if(recv_within_time(&from,&port,&buf,sizeof(buf),1,0)){
-        if(from.s_addr==parIP.s_addr && port==parPort){
-          crypt_decode(&buf,&key);
-          
-          if(rdn!=qypk.header.unique) goto dsloop1;
-          
-          if(buf.header.mode==_GET_PUBLIC_KEY){
-            memcpy(
-              parpbk,
-              buf.source,
-              ECDH_SIZE
-            );
-            parpbk[ECDH_SIZE]='\0';
-            limonp::md5String(parpbk,parhash);
-            return 1;
-          }else{
-            return 0;
-          }
-        }
-        else
-          goto dsloop1;
-      }
-    }
-    return 0;
-  }
   bool getUniKey(){
     netQuery qypk;
     netSource buf;
@@ -157,6 +113,14 @@ class Client:public Server{
     return 0;
   }
   bool reg(const netReg * k){
+    //认证。
+    //用于服务器没有登记客户端帐号的情况下
+    //由受信任的服务器开证明
+    //强行创建帐号
+    //
+    //先用getUniKey开证明
+    //然后连接到服务器
+    //再调用此方法
     netSource respk;
     netQuery  qypk;
     
@@ -274,50 +238,6 @@ class Client:public Server{
       }
     }
     liveEnd();
-  }
-  bool updatekey(){
-    netSource qypk;
-    netSource buf;
-    int i;
-    in_addr  from;
-    short    port;
-    bzero(&qypk,sizeof(qypk));
-    bzero(&buf ,sizeof(buf ));
-    Key senddata;
-    senddata.buf=(Key::netSendkey*)&(qypk.source);
-    senddata.initbuf();
-    qypk.header.mode=_UPDATEKEY;
-    qypk.header.userid=myuserid;
-    
-    int rdn=randnum();
-    qypk.header.unique=rdn;
-    
-    qypk.size=sizeof(Key::netSendkey);
-    wristr(mypassword,qypk.header.password);
-    if(iscrypt)crypt_encode(&qypk,&key);
-    for(i=0;i<10;i++){
-      send(parIP,parPort,&qypk,sizeof(qypk));
-      uploop2:
-      if(recv_within_time(&from,&port,&buf,sizeof(buf),1,0)){
-        if(from.s_addr==parIP.s_addr && port==parPort){
-          crypt_decode(&buf,&key);
-          
-          if(rdn!=qypk.header.unique) goto uploop2;
-          
-          if(config::checkSign)
-          if(!senddata.checksign())return 0;
-          senddata.computekey((unsigned char*)&buf.source);
-          for(i=0;i<16;i++){
-            this->key.data[i] =senddata.shared[i];
-            //server.key.data[i]=senddata.shared[i];
-          }
-          return 1;
-        }
-        else
-          goto uploop2;
-      }
-    }
-    return 0;
   }
   bool newSrc(const char * sname){
     netQuery qypk;

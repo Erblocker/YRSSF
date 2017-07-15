@@ -24,6 +24,7 @@ all:../build/YRSSF
     cache.hpp.gch         \
     threadpool.hpp.gch    \
     httpd.hpp.gch         \
+    sta.hpp.gch           \
     main.cpp              \
     sqlite/sqlite3.o      \
     ./zlib/libz.a         \
@@ -153,6 +154,8 @@ httpdtemplate.hpp.gch : httpdtemplate.hpp
 	g++ httpdtemplate.hpp -std=c++0x
 luapool.hpp.gch : luapool.hpp
 	g++ luapool.hpp -std=c++0x
+sta.hpp.gch : sta.hpp
+	g++ sta.hpp -std=c++0x
 clean:
 	-rm *.gch
 	-rm ../build/YRSSF

@@ -26,6 +26,8 @@ class ysConnection:public serverBase{
   char                 globalmode;
   bool                 iscrypt;
   aesblock             key;
+  char                 parpbk[ECDH_SIZE+1];
+  std::string          parhash;
   ysConnection(short p):serverBase(p){
     mypassword[16]='\0';
     script="default.lua";
@@ -819,6 +821,22 @@ class ysConnection:public serverBase{
 *do something......
 */
     //ysDebug("login");
+    if(!getPbk())return 0;
+    
+    std::string dbkey="safe_key_";
+    dbkey+=parhash;
+    
+    std::string dbv;
+    //检查数据库中是否有aes密码
+    if(ysDB.ldata->Get(leveldb::ReadOptions(),dbkey,&dbv).ok()){
+      if(dbv.empty())goto no_key;//如果没有
+      
+      key.getbase64(dbv.c_str());
+      iscrypt=1;
+      //有，则启动加密
+    }
+    
+    no_key:
     netQuery  qypk;
     netSource buf;
     int      i,rdn;
@@ -962,6 +980,101 @@ class ysConnection:public serverBase{
           goto dsloop1;
       }
     }
+  }
+  bool getPbk(){
+    netSource qypk;
+    netSource buf;
+    int i;
+    in_addr  from;
+    short    port;
+    bzero(&qypk,sizeof(qypk));
+    qypk.header.mode=_GET_PUBLIC_KEY;
+    qypk.header.userid=myuserid;
+    int rdn=randnum();
+    qypk.header.unique=rdn;
+    //wristr(mypassword,qypk.header.password);
+    //获取公钥不需要密码
+    if(iscrypt)crypt_encode(&qypk,&key);
+    for(i=0;i<10;i++){
+      send(parIP,parPort,&qypk,sizeof(qypk));
+      dsloop1:
+      if(recv_within_time(&from,&port,&buf,sizeof(buf),1,0)){
+        if(from.s_addr==parIP.s_addr && port==parPort){
+          crypt_decode(&buf,&key);
+          
+          if(rdn!=qypk.header.unique) goto dsloop1;
+          
+          if(buf.header.mode==_GET_PUBLIC_KEY){
+            memcpy(
+              parpbk,
+              buf.source,
+              ECDH_SIZE
+            );
+            parpbk[ECDH_SIZE]='\0';
+            limonp::md5String(parpbk,parhash);
+            //别慌，这是公钥，本来就没有保密的必要
+            //所以用md5也无所谓了。
+            //如果确实担心，请把这个换成sha（openssl里面有）
+            return 1;
+          }else{
+            return 0;
+          }
+        }
+        else
+          goto dsloop1;
+      }
+    }
+    return 0;
+  }
+  bool updatekey(){
+    if(!getPbk())return 0;
+    netSource qypk;
+    netSource buf;
+    int i;
+    in_addr  from;
+    short    port;
+    bzero(&qypk,sizeof(qypk));
+    bzero(&buf ,sizeof(buf ));
+    Key senddata;
+    senddata.buf=(Key::netSendkey*)&(qypk.source);
+    senddata.initbuf();
+    qypk.header.mode=_UPDATEKEY;
+    qypk.header.userid=myuserid;
+    
+    int rdn=randnum();
+    qypk.header.unique=rdn;
+    
+    qypk.size=sizeof(Key::netSendkey);
+    wristr(mypassword,qypk.header.password);
+    if(iscrypt)crypt_encode(&qypk,&key);
+    for(i=0;i<10;i++){
+      send(parIP,parPort,&qypk,sizeof(qypk));
+      uploop2:
+      if(recv_within_time(&from,&port,&buf,sizeof(buf),1,0)){
+        if(from.s_addr==parIP.s_addr && port==parPort){
+          crypt_decode(&buf,&key);
+          
+          if(rdn!=qypk.header.unique) goto uploop2;
+          
+          if(config::checkSign)
+          if(!senddata.checksign())return 0;
+          senddata.computekey((unsigned char*)&buf.source);
+          for(i=0;i<16;i++){
+            this->key.data[i] =senddata.shared[i];
+          }
+          //将密码保存至数据库
+          std::string dbkey="safe_key_";
+          dbkey+=parhash;
+          std::string dbpwd=this->key.tobase64();
+          ysDB.ldata->Put(leveldb::WriteOptions(),dbkey,dbpwd);
+          
+          return 1;
+        }
+        else
+          goto uploop2;
+      }
+    }
+    return 0;
   }
 };
 }

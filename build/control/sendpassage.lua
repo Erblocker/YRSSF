@@ -2,6 +2,29 @@ function setkw(kw)
   if kw==nil then
     return
   end
+--  if type(kw)~="table" then
+--    return
+--  end
+  local k,v
+  local word,acl,comm,arr
+  local dbk
+  for k,v in ipairs(kw) do
+    word=v[1]
+    acl=v[2]
+    comm={
+      ["mode"]    ="mem",
+      ["acl"]     =acl,
+      ["location"]=GET["pname"]
+    }
+    dbk="ai_mem_text_"..word
+    arr=cjson.decode(LDATA_read(dbk))
+    if type(arr)=="table" then
+      table.insert(arr,comm)
+    else
+      arr={comm}
+    end
+    LDATA_set(dbk,cjson.encode(arr))
+  end
 end
 function createdata(arr)
   local ori=LDATA_get("passage_"..GET["pname"])

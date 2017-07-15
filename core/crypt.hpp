@@ -11,12 +11,17 @@ extern "C"{
 namespace yrssf{
 struct aesblock{
   uint8_t data[16];
-  aesblock & operator=(aesblock & f){
+  aesblock & operator=(const aesblock & f){
     for(int i=0;i<16;i++) data[i]=f.data[i];
     return *this;
   }
   void tobase64(char * out)const{
     base64::encode(data,16,(unsigned char*)out);
+  }
+  std::string tobase64()const{
+    char buf[64];
+    tobase64(buf);
+    return std::string(buf);
   }
   void getbase64(const char * in){
     char buf[64];

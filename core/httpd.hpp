@@ -16,6 +16,7 @@
 #include <stdlib.h>
 #include <list>
 #include <iostream>
+#include <set>
 #include "httpdpaser.hpp"
 #include "global.hpp"
 #include "httpdfastcgi.hpp"
@@ -30,6 +31,18 @@ extern "C"{
 namespace yrssf{
   namespace httpd{
     std::atomic<int> thread_number(0);
+    std::set<std::string> allowexec;
+    bool allowed(std::string ext){
+      auto it=allowexec.find(ext);
+      if(it==allowexec.end()){
+        return 0;
+      }else{
+        return 1;
+      }
+    }
+    bool allowext(std::string ext){
+      allowexec.insert(ext);
+    }
     bool file_exist(const char * path){
       if(access(path,F_OK)==0)
         return 1;
@@ -797,6 +810,11 @@ namespace yrssf{
         }
         
         //ysDebug("fd:%d",connfd);
+        
+        char ext[16];
+        mimer.getext(path,ext);
+        
+        if(!allowed(ext)) cgi=0;
 
         if (!cgi) {
             //静态解析
@@ -805,8 +823,7 @@ namespace yrssf{
         } else {
             //CGI解析
             ysDebug("execute_cgi:%s query=%s",path,req.query);
-            char ext[16];
-            mimer.getext(path,ext);
+            
             if(strcmp(ext,"lua")==0){
               execute_lua(connfd, path, method, query_string,&req);
             }else{
@@ -1105,6 +1122,12 @@ namespace yrssf{
         {"setFastCGIHost",[](lua_State * L){
             if(!lua_isstring(L,1))return 0;
             fastcgi::sethost(lua_tostring(L,1));
+            return 0;
+          }
+        },
+        {"allowExtExec",[](lua_State * L){
+            if(!lua_isstring(L,1))return 0;
+            allowext(lua_tostring(L,1));
             return 0;
           }
         },

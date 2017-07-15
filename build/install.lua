@@ -65,6 +65,14 @@ function install()
         ["unique"]=0
       }
     )
+    controlConfig("ai",{
+        ["path"]  ="./control/ai.lua",
+        ["token"] =0,
+        ["login"] =0,
+        ["admin"] =0,
+        ["unique"]=0
+      }
+    )
     --------------------
     LDATA_set("user_admin",{
         ["pwd"]  ="",
