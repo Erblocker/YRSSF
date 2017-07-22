@@ -13,7 +13,7 @@ function setkw(kw)
     acl=v[2]
     comm={
       ["mode"]    ="mem",
-      ["acl"]     =acl,
+      ["exp"]     =acl,
       ["location"]=GET["pname"]
     }
     dbk="ai_mem_text_"..word

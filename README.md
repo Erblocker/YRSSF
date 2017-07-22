@@ -30,7 +30,9 @@ lock目录下的东西极度危险！极度危险！极度危险！重要的事�
 ### Linux: ###  
 #### 下载并编译：  
 ` $ git clone https://github.com/cgoxopx/YRSSF `  
+或者是` $ git clone http://git.oschina.net/cgoxopx/YRSSF `(如果网速慢的话)  
 ` $ cd YRSSF && make `  
+安装人工智能组件(可省略)` $ make atulocher`  
 ` $ cd core  && make `  
 ` $ cd ../launcher && make `  
 ` $ cd ../build `  

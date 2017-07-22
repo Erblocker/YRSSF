@@ -16,3 +16,6 @@ YRSSF-linux:
 	cd core && make
 build/lock:
 	cd lock && make
+atulocher:
+	git clone http://git.oschina.net/cgoxopx/atulocher
+	cd atulocher && make
