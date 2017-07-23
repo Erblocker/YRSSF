@@ -18,10 +18,19 @@ function ai_search_exp(arr)
   end
   return st
 end
-function ai_search_arr(arr)
+function ai_search_top(arr)
   local exps=ai_search_exp(arr)
   ---- 获取权重列表
+  local k,v,mk,mv
+  mv=0.0
+  for k,v in pairs(exps) do
+    if v>mv then
+      mk=k
+      mv=v
+    end
+  end
+  return mk,mv
 end
 function ai_search_word(str)
-  return ai_search_arr(langsolver.keyword(str))
+  return ai_search_exp(langsolver.keyword(str))
 end
