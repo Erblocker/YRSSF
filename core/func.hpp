@@ -281,11 +281,10 @@ template<typename T> class vec3{
       z=zt;
     }
     virtual bool operator==(vec3<T> &i){
-      if(x==i.x)
-      if(x==i.y)
-      if(x==i.z)
+      if(x!=i.x)return false;
+      if(y!=i.y)return false;
+      if(z!=i.z)return false;
       return true;
-      return false;
     }
     virtual void operator()(T xt,T yt,T zt){
       init(xt,yt,zt);

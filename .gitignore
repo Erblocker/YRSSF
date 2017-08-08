@@ -20,6 +20,7 @@ YRSSF
 /core/leveldb/out-static/*
 /build/data/*/*
 /build/data/cert.txt
+/build/dict*
 /build/live/*
 /build/live-client
 /build/launcher

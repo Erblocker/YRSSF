@@ -83,15 +83,15 @@ class location{
   }
 };
 struct netHeader{
-  char     crypt;
-  nint32   userid;
-  int32_t  unique;
-  nint32   len;
-  nint32   hash;
-  char     password[16];
-  char     mode;
-  char     globalMode;
-  char     function[16];
+  char          crypt;
+  nint32        userid;
+  int32_t       unique;
+  nint32        len;
+  nint32        hash;
+  char          password[16];
+  unsigned char mode;
+  char          globalMode;
+  char          function[16];
 };
 struct netQuery{
   netHeader header;
