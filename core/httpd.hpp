@@ -180,7 +180,7 @@ namespace yrssf{
       std::string prefix;
       hcallback   callback;
     };
-    std::list<router>handlers; 
+    std::list<router>handlers,ws; 
     void(*rewrite)(char*)=NULL;
     //匹配前缀
     //s1:前缀
@@ -203,12 +203,27 @@ namespace yrssf{
       }
       return NULL;
     }
+    hcallback websocket_match(const char * str){
+      for(auto it=ws.begin();it!=ws.end();it++){
+        if(prefix_match((*it).prefix.c_str(),str)){
+          return (*it).callback;
+        }
+      }
+      return NULL;
+    }
     void addrule(hcallback callback,const char * pf){
       std::string prefix=pf;
       router rr;
       rr.callback=callback;
       rr.prefix=prefix;
       handlers.push_back(rr);
+    }
+    void addwebsocketrule(hcallback callback,const char * pf){
+      std::string prefix=pf;
+      router rr;
+      rr.callback=callback;
+      rr.prefix=prefix;
+      ws.push_back(rr);
     }
     void not_found(int connfd){
       char buf[1024];
@@ -741,6 +756,14 @@ namespace yrssf{
         cb(&req);
         close(connfd);
         thread_number--;
+        return;
+      }
+      
+      cb=websocket_match(url);
+      if(cb){
+        thread_number--;
+        ysDebug("websocket:%s query=%s",path,req.query);
+        cb(&req);
         return;
       }
 

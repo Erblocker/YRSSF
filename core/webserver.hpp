@@ -3,6 +3,7 @@
 #include "client.hpp"
 #include "httpd.hpp"
 #include "global.hpp"
+#include "websocket.hpp"
 void ajax(yrssf::httpd::request * req){
     auto Lp=yrssf::luapool::Create();
     lua_State * L=Lp->L;
@@ -133,6 +134,7 @@ void msrc(yrssf::httpd::request * req){
 void webserverRun(){
     yrssf::httpd::addrule(ajax,"/ajax");
     yrssf::httpd::addrule(msrc,"/mysource");
+    yrssf::httpd::addwebsocketrule(yrssf::websocket::callback,"/websocket");
     yrssf::httpd::run(yrssf::config::L.httpdPort);
 }
 #endif

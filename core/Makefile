@@ -25,6 +25,7 @@ all:../build/YRSSF
     threadpool.hpp.gch    \
     httpd.hpp.gch         \
     sta.hpp.gch           \
+    websocket.hpp.gch     \
     main.cpp              \
     sqlite/sqlite3.o      \
     ./zlib/libz.a         \
@@ -156,6 +157,8 @@ luapool.hpp.gch : luapool.hpp
 	g++ luapool.hpp -std=c++0x
 sta.hpp.gch : sta.hpp
 	g++ sta.hpp -std=c++0x
+websocket.hpp.gch : websocket.hpp
+	g++ websocket.hpp -std=c++0x
 clean:
 	-rm *.gch
 	-rm ../build/YRSSF
