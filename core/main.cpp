@@ -817,6 +817,13 @@ class API{
       clientdisabled=0;
       return 0;
     });
+    lua_register(L,"callPlus",[](lua_State * L){
+      if(clientdisabled)return 0;
+      clientlocker.lock();
+      int res=client.callPlus(L);
+      clientlocker.unlock();
+      return res;
+    });
     lua_register(L,"setServerUser",lua_ssu);
     lua_register(L,"setClientUser",lua_scu);
     luaopen_cjson(L);

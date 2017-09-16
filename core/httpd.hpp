@@ -203,7 +203,7 @@ namespace yrssf{
       }
       return NULL;
     }
-    hcallback websocket_match(const char * str){
+    hcallback longconn_match(const char * str){
       for(auto it=ws.begin();it!=ws.end();it++){
         if(prefix_match((*it).prefix.c_str(),str)){
           return (*it).callback;
@@ -218,7 +218,7 @@ namespace yrssf{
       rr.prefix=prefix;
       handlers.push_back(rr);
     }
-    void addwebsocketrule(hcallback callback,const char * pf){
+    void addlongrule(hcallback callback,const char * pf){
       std::string prefix=pf;
       router rr;
       rr.callback=callback;
@@ -759,10 +759,10 @@ namespace yrssf{
         return;
       }
       
-      cb=websocket_match(url);
+      cb=longconn_match(url);
       if(cb){
         thread_number--;
-        ysDebug("websocket:%s query=%s",path,req.query);
+        ysDebug("longconn:%s query=%s",path,req.query);
         cb(&req);
         return;
       }

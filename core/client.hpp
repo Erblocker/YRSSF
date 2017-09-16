@@ -535,6 +535,75 @@ class Client:public Server{
       }
     }
   }
+  int callPlus(lua_State * L){
+    netQuery qypk;
+    netQuery buf;
+    int      i;
+    in_addr  from;
+    short    port;
+    
+    char     bufs[17];
+    bufs[16]='\0';
+      
+    bzero(&qypk,sizeof(qypk));
+    bzero(&buf ,sizeof(buf ));
+    qypk.header.mode=_PLUS;
+    wristr(mypassword,qypk.header.password);
+    
+    int rdn=randnum();
+    qypk.header.unique=rdn;
+    
+    qypk.header.userid=myuserid;
+    
+      //从这里可以看出，callPlus的数据包非常小
+      //要传输文件，请直接上传资源，然后用callPlus传资源id
+      if(lua_isstring(L,1))
+        wristr(lua_tostring(L,1),qypk.str1);
+      if(lua_isstring(L,2))
+        wristr(lua_tostring(L,2),qypk.str2);
+      if(lua_isinteger(L,3))
+        qypk.num1=lua_tointeger(L,3);
+      if(lua_isinteger(L,4))
+        qypk.num2=lua_tointeger(L,4);
+      if(lua_isinteger(L,5))
+        qypk.num3=lua_tointeger(L,5);
+      if(lua_isinteger(L,6))
+        qypk.num4=lua_tointeger(L,6);
+      
+    
+    if(iscrypt)crypt_encode(&qypk,&key);
+    for(i=0;i<10;i++){
+      send(parIP,parPort,&qypk,sizeof(qypk));
+      dsloop1:
+      if(recv_within_time(&from,&port,&buf,sizeof(buf),1,0)){
+        if(from.s_addr==parIP.s_addr && port==parPort){
+          crypt_decode(&buf,&key);
+          
+          if(rdn!=qypk.header.unique) goto dsloop1;
+          
+          if(buf.header.mode==_PLUS){
+            
+            //push querys
+            wristr(buf.str1, bufs);
+            lua_pushstring(L,bufs);
+            
+            wristr(buf.str2, bufs);
+            lua_pushstring(L,bufs);
+            
+            lua_pushinteger(L,buf.num1());
+            lua_pushinteger(L,buf.num2());
+            lua_pushinteger(L,buf.num3());
+            lua_pushinteger(L,buf.num4());
+        
+            return 6;
+          }else
+            return 0;
+        }
+        else
+          goto dsloop1;
+      }
+    }
+  }
 }client(config::L.yscPort);
 }
 #endif

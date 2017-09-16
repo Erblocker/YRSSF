@@ -1,0 +1,244 @@
+<!DOCTYPE HTML>
+<html>
+  <head>
+    <title>YRSSF</title>
+    <meta charset="utf-8"/>
+    <script>
+      window.onerror=function(a,b,c,d,e,f){
+        alert("error:"+a+b+c+d+e+f);
+      }
+    </script>
+    <script src="js/jquery.js"></script>
+    <script src="js/yrssf.js"></script>
+    <style type="text/css">
+      .nightmode{
+        filter:custom(
+          url('nightmode.vs.glsl')
+          url('nightmode.fs.glsl'),
+          40 40,
+          amplitude 60,
+          amount 0.0
+        );
+      }
+      #v_box {
+        z-index:10;
+        height:100%;
+        width:100%;
+        display:none;
+        text-align: center;
+        position:absolute;
+      }
+      #setting {
+        z-index:11;
+        text-align: center;
+        display:none;
+        height:100%;
+        width:100%;
+        position:absolute;
+      }
+      #mine {
+        z-index:15;
+        text-align: center;
+        display:none;
+        height:100%;
+        width:100%;
+        position:absolute;
+      }
+      #chat {
+        z-index:100;
+        text-align:center;
+        display:none;
+        height:100%;
+        width:100%;
+        position:absolute;
+        background:rgba(0,255,255,0.5);
+      }
+      #chattext {
+        overflow-x:scroll;
+        overflow-y:scroll;
+        height:80%;
+        width:100%;
+        text-align:left;
+      }
+      #message {
+        z-index:999;
+        text-align:center;
+        display:none;
+        height:100%;
+        width:100%;
+        position:absolute;
+        background:rgba(0,255,255,0.5);
+      }
+      #source {
+        z-index:800;
+        text-align:center;
+        display:none;
+        height:100%;
+        width:100%;
+        position:absolute;
+        background:rgba(0,255,255,0.5);
+      }
+      #mbox {
+        z-index:1;
+        text-align:center;
+        height:100%;
+        width:100%;
+        position:absolute;
+        background:rgba(0,255,255,1);
+      }
+      #v_box_m {
+        overflow-x:scroll;
+        overflow-y:scroll;
+        height:80%;
+        width:100%;
+        text-align:left;
+      }
+      #usc_m {
+        overflow-x:scroll;
+        overflow-y:scroll;
+        height:80%;
+        width:100%;
+        text-align:center;
+      }
+      #srcbox {
+        overflow-x:scroll;
+        overflow-y:scroll;
+        height:80%;
+        width:100%;
+        text-align:left;
+      }
+      #user_center{
+        z-index:998;
+        text-align:center;
+        display:none;
+        height:100%;
+        width:100%;
+        position:absolute;
+        background:rgba(0,255,255,0.5);
+      }
+      #maindiv {
+        z-index:1;
+        text-align: left;
+        height:90%;
+        width:100%;
+        position:absolute;
+        background:rgba(0,255,255,1);
+        overflow-x:scroll;
+        overflow-y:scroll;
+      }
+      #topline {
+        z-index:1;
+        text-align: center;
+        height:10%;
+        width:100%;
+        position:absolute;
+        font-size:90%;
+        background:rgba(0,64,255,1);
+      }
+      #topline span{
+        float:left;
+        width:30%;
+        height:100%;
+      }
+      #topline span:hover{
+        background: #0099ee;
+        color:#ff6611;
+      }
+      #topline a:hover{
+        color:#ff6611;
+      }
+      a {
+        color: #0f7a8f;
+        text-decoration:none; 
+      }
+      a:hover {
+        text-decoration: underline;
+      }
+      div{
+        background:rgba(0,255,255,0.5);
+      }
+      li{
+        list-style-type:none;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="mbox">
+      <div id="topline">
+        <span><a href="javascript:openbox('#setting')">关于</a></span>
+        <span><a href="javascript:chat('main')">讨论</a></span>
+        <span><a href="javascript:openbox('#mine')">更多…</a></span>
+      </div>
+      <br/>
+      <div id="maindiv">
+        
+      </div>
+    </div>
+    <div id="v_box">
+      <a style="float:right;" href="javascript:closebox('#v_box')">
+        <img src="img/close.svg"/>
+      </a>
+      <div id="v_box_m" style="top:10%;">
+      </div>
+    </div>
+    <div id="user_center">
+      <a style="float:right;" href="javascript:closebox('#user_center')">
+        <img src="img/close.svg"/>
+      </a>
+      <div id="usc_m" style="top:10%;">
+        <div id="usc_login">
+          用户<input type="text" id="usc_login_uname"><br>
+          密码<input type="password" id="usc_login_pwd"><br>
+          <a href="javascript:login()">登录</a>
+        </div>
+        <div id="usc_info" style="display:none;">
+          
+        </div>
+      </div>
+    </div>
+    <div id="setting">
+      <a style="float:right;" href="javascript:closebox('#setting')">
+        <img src="img/close.svg"/>
+      </a>
+      <div>
+        
+      </div>
+    </div>
+    <div id="source">
+      <a style="float:right;" href="javascript:closebox('#source')">
+        <img src="img/close.svg"/>
+      </a>
+      <div id="srcbox" style="top:10%;width:100%;position:absolute;background:rgba(0,255,255,0.7);">
+        
+      </div>
+    </div>
+    <div id="message">
+      <a style="float:right;" href="javascript:closebox('#message')">
+        <img src="img/close.svg"/>
+      </a>
+      <div id="msgbox" style="top:10%;width:100%;position:absolute;background:rgba(0,255,255,0.7);">
+        
+      </div>
+    </div>
+    <div id="chat">
+      <a style="float:right;" href="javascript:closebox('#chat')">
+        <img src="img/close.svg"/>
+      </a>
+      <div id="chattext" style="top:10%;background:rgba(0,255,255,0.7);">
+        
+      </div>
+    </div>
+    <div id="mine" >
+      <a style="float:right;" href="javascript:closebox('#mine')">
+        <img src="img/close.svg"/>
+      </a>
+      <br>
+      <ul>
+        <li><a href="javascript:usercenter()">用户中心</a></li>
+        <li><a href="javascript:writepassage()">添加文章</a></li>
+      </ul>
+    </div>
+    <video id="themesong" src="ystheme.ogg"  width="0" height="0" loop="loop" controls>
+    </video>
+  </body>
+</html>

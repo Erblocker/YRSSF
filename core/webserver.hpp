@@ -134,7 +134,7 @@ void msrc(yrssf::httpd::request * req){
 void webserverRun(){
     yrssf::httpd::addrule(ajax,"/ajax");
     yrssf::httpd::addrule(msrc,"/mysource");
-    yrssf::httpd::addwebsocketrule(yrssf::websocket::callback,"/websocket");
+    yrssf::httpd::addlongrule(yrssf::websocket::callback,"/websocket");
     yrssf::httpd::run(yrssf::config::L.httpdPort);
 }
 #endif
