@@ -145,8 +145,8 @@ class ysConnection:public serverBase{
       ip.s_addr=inet_addr(lua_tostring(L,1));
       if(!lua_isinteger(L,2))return 0;
       short port=lua_tointeger(L,2);
-      if(!lua_isinteger(L,3))return 0;
-      auto self=(ysConnection*)lua_tointeger(L,3);
+      if(!lua_isptr(L,3))return 0;
+      auto self=(ysConnection*)lua_toptr(L,3);
       self->succeed(ip,port,0);
       return 0;
     });
@@ -156,8 +156,8 @@ class ysConnection:public serverBase{
       ip.s_addr=inet_addr(lua_tostring(L,1));
       if(!lua_isinteger(L,2))return 0;
       short port=lua_tointeger(L,2);
-      if(!lua_isinteger(L,3))return 0;
-      auto self=(ysConnection*)lua_tointeger(L,3);
+      if(!lua_isptr(L,3))return 0;
+      auto self=(ysConnection*)lua_toptr(L,3);
       self->fail(ip,port,0);
       return 0;
     });
@@ -167,8 +167,8 @@ class ysConnection:public serverBase{
       ip.s_addr=inet_addr(lua_tostring(L,1));
       if(!lua_isinteger(L,2))return 0;
       short port=lua_tointeger(L,2);
-      if(!lua_isinteger(L,3))return 0;
-      auto self=(ysConnection*)lua_tointeger(L,3);
+      if(!lua_isptr(L,3))return 0;
+      auto self=(ysConnection*)lua_toptr(L,3);
       lua_pushboolean(L,self->p2pconnect(ip,port));
       return 1;
     });
@@ -178,8 +178,8 @@ class ysConnection:public serverBase{
       ip.s_addr=inet_addr(lua_tostring(L,1));
       if(!lua_isinteger(L,2))return 0;
       short port=lua_tointeger(L,2);
-      if(!lua_isinteger(L,3))return 0;
-      auto self=(ysConnection*)lua_tointeger(L,3);
+      if(!lua_isptr(L,3))return 0;
+      auto self=(ysConnection*)lua_toptr(L,3);
       netQuery query;
       bzero(&query,sizeof(query));
       query.header.mode=_PLUS;
@@ -305,7 +305,7 @@ class ysConnection:public serverBase{
     lua_setglobal(lua,"FROM");
     lua_pushinteger(lua,port);
     lua_setglobal(lua,"FROM_PORT");
-    lua_pushinteger(lua,(int)this);
+    lua_pushptr(lua,this);
     lua_setglobal(lua,"RUNNINGSERVER");
     lua_pushinteger(lua,query->header.userid());
     lua_setglobal(lua,"USERID");

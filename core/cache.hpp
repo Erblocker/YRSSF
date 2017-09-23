@@ -20,8 +20,14 @@ namespace yrssf{
         time=nowtime_s();
         tl=t;
       }
+      inline static int ysabs(int inp){
+        if(inp>0)
+          return inp;
+        else
+          return -inp;
+      }
       bool timeout(){
-        if(abs(nowtime_s()-time)>=tl)
+        if(ysabs(nowtime_s()-time)>=tl)
           return 1;
       }
       value(){

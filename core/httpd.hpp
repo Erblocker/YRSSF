@@ -489,7 +489,7 @@ namespace yrssf{
         lua_settable(L, -3);
       }
         lua_pushstring(L, "paser");
-        lua_pushinteger(L, (int)req);
+        lua_pushptr(L, req);
         lua_settable(L, -3);
       lua_setglobal(L,"Request");
       //ysDebug("create env fd:%d",connfd);
@@ -1058,30 +1058,30 @@ namespace yrssf{
           }
         },
         {"getpost",[](lua_State * L){
-            if(!lua_isinteger(L,1))return 0;
-            request * req=(request*)lua_tointeger(L,1);
+            if(!lua_isptr(L,1))return 0;
+            request * req=(request*)lua_toptr(L,1);
             lua_pushboolean(L,req->getpost());
             return 1;
           }
         },
         {"init",[](lua_State * L){
-            if(!lua_isinteger(L,1))return 0;
-            request * req=(request*)lua_tointeger(L,1);
+            if(!lua_isptr(L,1))return 0;
+            request * req=(request*)lua_toptr(L,1);
             req->init();
             return 0;
           }
         },
         {"readheader",[](lua_State * L){
-            if(!lua_isinteger(L,1))return 0;
-            request * req=(request*)lua_tointeger(L,1);
+            if(!lua_isptr(L,1))return 0;
+            request * req=(request*)lua_toptr(L,1);
             req->readheader();
             return 0;
           }
         },
         {"writePostIntoFile",[](lua_State * L){
-            if(!lua_isinteger(L,1))return 0;
-            if(!lua_isstring (L,1))return 0;
-            request * req=(request*)lua_tointeger(L,1);
+            if(!lua_isptr    (L,1))return 0;
+            if(!lua_isstring (L,2))return 0;
+            request * req=(request*)lua_toptr(L,1);
             int fd=open(lua_tostring(L,2),O_WRONLY);
             if(fd==-1){
               lua_pushboolean(L,0);
@@ -1093,22 +1093,22 @@ namespace yrssf{
           }
         },
         {"checkpost",[](lua_State * L){
-            if(!lua_isinteger(L,1))return 0;
-            request * req=(request*)lua_tointeger(L,1);
+            if(!lua_isptr(L,1))return 0;
+            request * req=(request*)lua_toptr(L,1);
             lua_pushboolean(L,req->checkpost());
             return 0;
           }
         },
         {"getcookie",[](lua_State * L){
-            if(!lua_isinteger(L,1))return 0;
-            request * req=(request*)lua_tointeger(L,1);
+            if(!lua_isptr(L,1))return 0;
+            request * req=(request*)lua_toptr(L,1);
             lua_pushboolean(L,req->getcookie());
             return 0;
           }
         },
         {"getcookieArray",[](lua_State * L){
-            if(!lua_isinteger(L,1))return 0;
-            request * req=(request*)lua_tointeger(L,1);
+            if(!lua_isptr(L,1))return 0;
+            request * req=(request*)lua_toptr(L,1);
             req->cookie_decode();
             lua_createtable(L,0,req->paseredcookie.size());
             writemapintolua(L,req->paseredcookie);
@@ -1116,8 +1116,8 @@ namespace yrssf{
           }
         },
         {"getheaderArray",[](lua_State * L){
-            if(!lua_isinteger(L,1))return 0;
-            request * req=(request*)lua_tointeger(L,1);
+            if(!lua_isptr(L,1))return 0;
+            request * req=(request*)lua_toptr(L,1);
             req->cookie_decode();
             lua_createtable(L,0,req->paseredcookie.size());
             writemapintolua(L,req->paseredheader);
@@ -1125,8 +1125,8 @@ namespace yrssf{
           }
         },
         {"getpostArray",[](lua_State * L){
-            if(!lua_isinteger(L,1))return 0;
-            request * req=(request*)lua_tointeger(L,1);
+            if(!lua_isptr(L,1))return 0;
+            request * req=(request*)lua_toptr(L,1);
             req->post_decode();
             lua_createtable(L,0,req->paseredpost.size());
             writemapintolua(L,req->paseredpost);
@@ -1134,8 +1134,8 @@ namespace yrssf{
           }
         },
         {"getqueryArray",[](lua_State * L){
-            if(!lua_isinteger(L,1))return 0;
-            request * req=(request*)lua_tointeger(L,1);
+            if(!lua_isptr(L,1))return 0;
+            request * req=(request*)lua_toptr(L,1);
             req->query_decode();
             lua_createtable(L,0,req->paseredquery.size());
             writemapintolua(L,req->paseredquery);

@@ -845,10 +845,10 @@ static void luaopen_yrssf_std(lua_State * L){
   char sbuffer[PATH_MAX];
   getcwd(sbuffer,PATH_MAX);
     luaL_openlibs      (L);
-    lua_pushinteger    (L,(int)&server);
-    lua_setglobal      (L,"_SERVER");
-    lua_pushinteger    (L,(int)&client);
-    lua_setglobal      (L,"_CLIENT");
+    lua_pushptr        (L,&server);
+    lua_setglobal      (L,"SERVER");
+    lua_pushptr        (L,&client);
+    lua_setglobal      (L,"CLIENT");
     lua_pushstring     (L,sbuffer);
     lua_setglobal      (L,"APP_PATH");
   ysConnection::funcreg(L);

@@ -9,6 +9,21 @@
 #include <string.h>
 namespace yrssf{
 ///////////////////////////////////////////
+inline int lua_isptr(lua_State * L,int p){
+  return (lua_isuserdata(L,p));
+}
+inline void * lua_toptr(lua_State * L,int p){
+  if(lua_isuserdata(L,p)){
+    auto pt=(void **)lua_touserdata(L,p);
+    return *pt;
+  }else{
+    return NULL;
+  }
+}
+inline void lua_pushptr(lua_State * L,void * ptr){
+  auto pt=(void **)lua_newuserdata(L,sizeof(void*));
+  *pt=ptr;
+}
 namespace math{
   double invsqrt(double x){
     double xhalf=0.5f*x;
