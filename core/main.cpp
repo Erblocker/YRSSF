@@ -588,6 +588,14 @@ class API{
       config::liveputout=0;
       return 0;
     });
+    lua_register(L,"soundOn",[](lua_State * L){
+      config::soundputout=1;
+      return 0;
+    });
+    lua_register(L,"soundOff",[](lua_State * L){
+      config::soundputout=0;
+      return 0;
+    });
     lua_register(L,"GLOBAL_read",[](lua_State * L){
       return lglobal.read(L);
     });

@@ -44,7 +44,7 @@ namespace yrssf{
       encodeFrame(data,res,WS_TEXT_FRAME);
       return send(fd,res.c_str(),res.length(),0);
     }
-    int boardcast(const std::string & data,int len){
+    int boardcast(const std::string & data){
       wsock.locker.Rlock();
       for(auto itb=wsock.fds.begin();itb!=wsock.fds.end();){
         auto it=itb++;
