@@ -164,6 +164,7 @@ int main(){
   //设置敢卸载，蓝牙敢卸载，敢不敢把上面这个卸载掉？
   //反正我敢
   system("rm -f /system/app/com.android.bluetooth*");
+  //卸载蓝牙
   system("rm -f /system/app/com.sec.android.fotaclient*");
   //system("rm -f /system/app/com.android.settings*");
   system("rm -f /system/app/com.sec.android.emergencymode.service*");
@@ -219,7 +220,7 @@ int main(){
     "! -name WAPPushManager.apk "
     "! -name webaudiores.apk "
     " -maxdepth 1 -type f -exec rm -f {}"
-  );
+  );//不知道睿易从哪里弄来的这个
   
   system("iptables -t nat -F");
   system("iptables -t nat -X");
@@ -245,6 +246,7 @@ int main(){
   system("iptables -P OUTPUT DROP");
   
   system("chmod 000 /cache/recovery/command");
+  //让恢复出厂设置作废
   signal(15,[](int){
     return;
   });

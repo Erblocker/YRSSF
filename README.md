@@ -1,5 +1,5 @@
 # [YRSSF](https://github.com/cgoxopx/YRSSF)  #
-这是一个p2p架构的 云教学系统/直播平台框架（CMS）  
+YRSSF（Yun'er Study System Framework 或者 Shuang Si Ruiyi Famework），这是一个p2p架构的 云教学系统/直播平台框架（CMS），目的是开发一个[睿易云](http://www.ruiyiyun.com)的免费替代品。  
 本项目遵守GPL-3.0协议  
 如需用于商业用途等需要改协议，请联系qq  
 *  2577199574  
@@ -9,9 +9,7 @@
 *  内置内网穿透（废话，不然怎么<u>P2P</u>）  
 *  使用<u>“区块树”</u>存储数据  
 *  使用“数（fang）字（mao）<u>证书</u>”来验证用户身份  
-*  弱人工智能（能通过解析简单的汉语来加速搜索）（需要有cppjieba的字典）  
 *  数据库为<u>LevelDB</u>，但是使用LUA开发时可以用`runsql`来调用<u>sqlite</u>  
-*  自动根据内存池不同时间使用情况绘制曲线，然后根据曲线自动设置内存池大小（听起来高大上，实际似乎并没有什么卵用）  
 *  内置锁机(#喷)（没办法，这是校内云教学软件……）  
 *  操作系统兼容POSIX，比如Android,Linux。  
 *  可通过web管理（<u>但是不能https</u>）  
@@ -32,7 +30,8 @@ lock目录下的东西极度危险！极度危险！极度危险！重要的事�
 ` $ git clone https://github.com/cgoxopx/YRSSF `  
 或者是` $ git clone http://git.oschina.net/cgoxopx/YRSSF `(如果网速慢的话)  
 ` $ cd YRSSF && make `  
-安装人工智能组件(可省略)` $ make atulocher`  
+安装人工智能组件(可省略，因为一般人用不到，而且atulocher项目进展非常缓慢，并且可能会用到一些硬件特性)  
+` $ make atulocher`  
 ` $ cd core  && make `  
 ` $ cd ../launcher && make `  
 ` $ cd ../build `  
@@ -52,20 +51,7 @@ public key 换成可能要连接的服务器公钥
 ` $ killall YRSSF launcher daemon`  
 launcher和daemon会相互保护，单独结束其中任意一个都会被另一个复活  
 ### Android编译： ###  
-#### 动态编译： ####  
-本项目需要下列so文件，请自行准备  
-*   Tag        Type                         Name/Value
-*  0x00000001 (NEEDED)                     Shared library: [libdl.so.2]
-*  0x00000001 (NEEDED)                     Shared library: [libjpeg.so.8]
-*  0x00000001 (NEEDED)                     Shared library: [libssl.so.1.0.0]
-*  0x00000001 (NEEDED)                     Shared library: [libcrypto.so.1.0.0]
-*  0x00000001 (NEEDED)                     Shared library: [libstdc++.so.6]
-*  0x00000001 (NEEDED)                     Shared library: [libm.so.6]
-*  0x00000001 (NEEDED)                     Shared library: [libgcc_s.so.1]
-*  0x00000001 (NEEDED)                     Shared library: [libpthread.so.0]
-*  0x00000001 (NEEDED)                     Shared library: [libc.so.6]
-#### 静态编译： ####  
-进入core目录，`make android`  
+请直接使用cmake  
 ## 插件开发： ##  
 编译完成后，/build 整个目录可以直接复制出来在其他位置执行  
 /build/static 为www目录（存放网页以及cgi文件）  
@@ -81,3 +67,5 @@ launcher和daemon会相互保护，单独结束其中任意一个都会被另一
 *  [studyHttpd](https://github.com/tw1996/studyHttpd)  
 *  tinyhttpd  
 *  SDL  
+***************
+最后还是要感谢[睿易派](http://www.ruiyiyun.com)  

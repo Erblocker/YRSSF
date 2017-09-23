@@ -15,16 +15,17 @@ extern "C" {
 
 namespace yrssf{
   namespace config{
-    bool AllowShell   =0;
-    bool checkSign    =0;
-    bool nodemode     =0;
-    bool stop         =0;
-    bool fastcgi      =0;
-    bool autoboardcast=0;
-    bool liveputout   =1;
-    double livepresent=0.01d;
-    unsigned int httpBodyLength=65536;
-    unsigned int maxRequest=16;
+    bool AllowShell               =0;
+    bool checkSign                =0;
+    bool nodemode                 =0;
+    bool stop                     =0;
+    bool fastcgi                  =0;
+    bool autoboardcast            =0;
+    bool liveputout               =0;
+    bool soundputout              =0;
+    double livepresent            =0.01d;
+    unsigned int httpBodyLength   =65536;
+    unsigned int maxRequest       =16;
     class LL{
       public:
       short httpdPort;
